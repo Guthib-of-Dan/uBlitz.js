@@ -4,7 +4,17 @@ Http + Websockets library, trying to combine speed, light weight and DX. It is b
 
 ## Main purpose - handle BASE.
 
-We don't offer middlewares, but error and abort handling, serving static content, helping with http headers and codes - you are welcome.
+We don't offer middlewares, but if you need:
+
+- error and abort handling,
+- serving static content 500+ megabytes
+- ajv validation
+- straight-forward routing
+- parsing protobuf or multipart body
+- coloring your console
+- making your code typescript-first
+- helping with http headers and codes
+  You ARE welcome.
 
 ## Low level remains, but in acceptable amount
 

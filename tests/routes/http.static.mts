@@ -12,7 +12,7 @@ import {
   setCSP,
   CSPDirs,
   useBody,
-} from "../../package/index.mts";
+} from "../../src/index.mts";
 import cacheDB from "../lib/cache.mts";
 const router = new Router({
   "/": {

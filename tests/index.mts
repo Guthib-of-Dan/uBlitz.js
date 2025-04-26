@@ -1,4 +1,4 @@
-import { extendApp, logger, toAB } from "../package/index.mts";
+import { extendApp, logger, toAB } from "../src/index.mts";
 import μWS from "uWebSockets.js";
 import httpStatic from "./routes/http.static.mts";
 import process from "node:process";

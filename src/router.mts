@@ -126,10 +126,17 @@ class Router<Opts extends routerOpts> {
   constructor(opts: Opts) {
     this.options = opts;
   }
+  /**
+   * When you use definePlugin - you get the server instance, which you "bind" to your router
+   */
   public bind(server: Server): this {
     this.server = server;
     return this;
   }
+  /**
+   * @example
+   * router.bind(server).route(PATH, ...registeredMethods)
+   */
   public route<Path extends keyof Opts>(
     path: Path,
     ...methods: (keyof Opts[Path])[]
@@ -173,63 +180,6 @@ class Router<Opts extends routerOpts> {
  * route WITHOUT body
  */
 class LightRoute<T extends Schemas<"meta">> implements lightRouteI<T> {
-  staticHeaders?: HeadersMap<BaseHeaders> | undefined;
-  schemas: T;
-  onAbort?(): void;
-  getMeta: (res: HttpResponse, req: HttpRequest) => Static<T["meta"]>;
-  onError?: (error: Error, res: HttpResponse, data: RequestData<T>) => any;
-  handler: (
-    res: HttpResponse,
-    req: HttpRequest,
-    data: RequestData<T>
-  ) => any | Promise<any>;
-  constructor(opts: lightRouteI<T>) {
-    this.staticHeaders = opts.staticHeaders;
-    this.schemas = opts.schemas;
-    this.onAbort = opts.onAbort;
-    this.onError = opts.onError;
-    this.handler = opts.handler;
-    this.getMeta = opts.getMeta;
-  }
-}
-/**
- * route WiTH body
- */
-class HeavyRoute<T extends Schemas<"meta" | "body">>
-  extends LightRoute<T>
-  implements heavyRouteI2<T>
-{
-  parseBody: (
-    res: HttpResponse,
-    req: HttpRequest,
-    meta: Static<T["meta"]>
-  ) => Static<T["body"]> | Promise<Static<T["body"]>>;
-  constructor(opts: heavyRouteI2<T>) {
-    super(opts);
-    this.getMeta = opts.getMeta;
-    this.parseBody = opts.parseBody;
-  }
-}
-type Schemas<Keys extends string = string> = Record<Keys, TSchema>;
-/**
- * data, which looks like (HeavyRoute | LightRoute).schemas, but is already validated. Is passed to onError and handler
- */
-type RequestData<T extends Schemas> = {
-  [type in keyof T]: Static<T[type]>;
-};
-interface heavyRouteI2<T extends Schemas<"meta" | "body">>
-  extends lightRouteI<T> {
-  /**
-   * @param meta data, returned from this.getMeta
-   * @returns body, which will be validated with this.schemas.body
-   */
-  parseBody: (
-    res: HttpResponse,
-    req: HttpRequest,
-    meta: Static<T["meta"]>
-  ) => Static<T["body"]> | Promise<Static<T["meta"]>>;
-}
-interface lightRouteI<T extends Schemas<"meta">> {
   staticHeaders?: HeadersMap<BaseHeaders>;
   /**
    * function which prepares the request data for the validation (headers, parameters, querystring).
@@ -254,6 +204,63 @@ interface lightRouteI<T extends Schemas<"meta">> {
   /**
    * @param data same as described in this.schemas, but validated
    */
+  handler: (
+    res: HttpResponse,
+    req: HttpRequest,
+    data: RequestData<T>
+  ) => any | Promise<any>;
+  constructor(opts: lightRouteI<T>) {
+    this.staticHeaders = opts.staticHeaders;
+    this.schemas = opts.schemas;
+    this.onAbort = opts.onAbort;
+    this.onError = opts.onError;
+    this.handler = opts.handler;
+    this.getMeta = opts.getMeta;
+  }
+}
+/**
+ * route WiTH body
+ */
+class HeavyRoute<T extends Schemas<"meta" | "body">>
+  extends LightRoute<T>
+  implements heavyRouteI<T>
+{
+  /**
+   * @param meta data, returned from this.getMeta
+   * @returns body, which will be validated with this.schemas.body
+   */
+  parseBody: (
+    res: HttpResponse,
+    req: HttpRequest,
+    meta: Static<T["meta"]>
+  ) => Static<T["body"]> | Promise<Static<T["meta"]>>;
+  constructor(opts: heavyRouteI<T>) {
+    super(opts);
+    this.getMeta = opts.getMeta;
+    this.parseBody = opts.parseBody;
+  }
+}
+type Schemas<Keys extends string = string> = Record<Keys, TSchema>;
+/**
+ * data, which looks like (HeavyRoute | LightRoute).schemas, but is already validated. Is passed to onError and handler
+ */
+type RequestData<T extends Schemas> = {
+  [type in keyof T]: Static<T[type]>;
+};
+interface heavyRouteI<T extends Schemas<"meta" | "body">>
+  extends lightRouteI<T> {
+  parseBody: (
+    res: HttpResponse,
+    req: HttpRequest,
+    meta: Static<T["meta"]>
+  ) => Static<T["body"]> | Promise<Static<T["meta"]>>;
+}
+interface lightRouteI<T extends Schemas<"meta">> {
+  staticHeaders?: HeadersMap<BaseHeaders>;
+  getMeta: (res: HttpResponse, req: HttpRequest) => Static<T["meta"]>;
+  schemas: T;
+  onAbort?: () => void;
+  onError?: (error: Error, res: HttpResponse, data: RequestData<T>) => any;
   handler: (
     res: HttpResponse,
     req: HttpRequest,

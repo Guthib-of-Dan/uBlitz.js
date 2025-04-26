@@ -1,8 +1,9 @@
-import {
-  type HttpRequest,
-  type TemplatedApp,
-  type HttpResponse as uwsHttpResponse,
+import type {
+  HttpRequest,
+  TemplatedApp,
+  HttpResponse as uwsHttpResponse,
 } from "uWebSockets.js";
+import type { PBType, PBMessage } from "./proto.mts";
 import { Buffer } from "node:buffer";
 import { useBody } from "./body.mts";
 import { sendFile } from "./sendFile.mts";
@@ -90,7 +91,6 @@ function extendApp(App: TemplatedApp): Server {
 
   return server;
 }
-
 /**
  * fast conversion to ArrayBuffer ('cause transferring strings to uWS is really slow)
  */
@@ -102,19 +102,7 @@ function toAB(data: Buffer | string): ArrayBuffer {
     NodeBuf.byteOffset + NodeBuf.byteLength
   ) as any;
 }
-/**
- * interface of protobufjs Message, so that you aren't required to download protobufjs
- */
-interface PBMessage {
-  toJSON(): object;
-}
-/**
- * interface of protobufjs Type, so that you aren't required to download protobufjs
- */
-interface PBType {
-  decode(arr: Uint8Array, length?: number): PBMessage;
-  [k: string]: any;
-}
+
 export {
   type HttpResponse,
   type HttpMethods,

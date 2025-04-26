@@ -116,7 +116,6 @@ function setCSP<T extends CSP>(mainCSP: T, ...remove: (keyof CSP)[]): string {
     CSPstring += `${key as string} ${(mainCSP[key] as string[]).join(" ")}; `;
   return CSPstring;
 }
-setCSP({ "default-src": ["'self'"] });
 
 var CSPDirs = {
   /**

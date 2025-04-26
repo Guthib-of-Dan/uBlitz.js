@@ -14,6 +14,9 @@ function bindTryEnd(
       res.cork(() => resolve(res.tryEnd(chunk, maxSize)))
     );
 }
+/**
+ * Efficiently send file with size over 500 megabytes with low-level tricks and automated backpressure handling.
+ */
 async function sendFile({
   path,
   contentType,
@@ -87,6 +90,6 @@ async function sendFile({
   //!___________registration
   readStream
     .on("data", onData as any)
-    .once("error", () => logger.error("error"));
+    .once("error", (err) => logger.error("error", err));
 }
 export { sendFile };

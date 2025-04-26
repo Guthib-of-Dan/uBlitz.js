@@ -1,10 +1,5 @@
-import {
-  logger,
-  // logger,
-  type HttpResponse,
-  type PBMessage,
-  type PBType,
-} from "./index.mts";
+import { logger, type HttpResponse } from "./index.mts";
+import type { PBType, PBMessage } from "./proto.mts";
 import { EventEmitter } from "node:events";
 import { tooLargeBody } from "./http-codes.mts";
 import busboy from "busboy";
