@@ -1,0 +1,16 @@
+package-lock.json
+node_modules
+build.js
+text.txt
+.env
+bundle
+todo.txt
+bundle.mjs
+.dockerignore
+compose.yaml
+Dockerfile
+dump.rdb
+proto.js
+proto.compiled.mjs
+package.json
+a.ts

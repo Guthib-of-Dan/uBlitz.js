@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div>
+      <h1>Hi</h1>
+      <textarea>message</textarea>
+      <button onclick="window.click()">Click to send</button>
+    </div>
+    <form action="/post" method="post" enctype="multipart/form-data">
+      <input type="text" name="field1" />
+      <input type="file" name="file1" />
+      <input type="file" name="file2" />
+      <input type="file" name="file3" />
+      <button type="submit">Submit</button>
+    </form>
+    <script type="module">
+      import { Test } from "/compiled";
+      (async function () {
+        console.log(Test);
+        const textarea = document.querySelector("textarea");
+        window.click = async function () {
+          /**
+           * @type {Uint8Array}
+           */
+          window.message = Test.encode(
+            Test.create({ hello: textarea.value })
+          ).finish();
+          var body = window.message.slice(0, window.message.byteLength).buffer;
+          var response = fetch("/api", {
+            method: "POST",
+            body,
+            headers: new Headers({
+              "Content-Type": "application/x-protobuf",
+            }),
+          }).then((res) => res.arrayBuffer());
+          console.log(Test.decode(new Uint8Array(await response)));
+        };
+      })();
+    </script>
+  </body>
+</html>
