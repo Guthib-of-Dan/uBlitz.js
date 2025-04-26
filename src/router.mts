@@ -10,14 +10,13 @@ import {
 } from "./index.mts";
 import type { Static, TSchema } from "@sinclair/typebox";
 import Ajv from "ajv";
-import { badRequest, SeeOtherMethods } from "./http-codes.mts";
+import { badRequest, seeOtherMethods } from "./http-codes.mts";
 import type { BaseHeaders } from "./http-headers.mts";
 var ajv = new Ajv();
 /**
- * function to easily handle request abortion and, if param is true - immediately end the request
+ * function to effortlessly mark response as aborted
  * @param res
- * @param abortCb this function is called right when request is getting aborted
- * @returns true, if request was aborted, and else, if not. Use only with let:  "let a = registerAbort()"
+ * @param cb this function is called right when request is getting aborted
  */
 function registerAbort(
   res: HttpResponse,
@@ -170,7 +169,7 @@ class Router<Opts extends routerOpts> {
     var controller: HttpControllerFn = this.options[path]["any"] as any;
     if (controller instanceof LightRoute)
       throw new Error("No Route classes for 'any' routes");
-    if (!controller) controller = SeeOtherMethods(methods as HttpMethods[]);
+    if (!controller) controller = seeOtherMethods(methods as HttpMethods[]);
     setStructure(anyMonolith, controller);
     (this.server as any)["any"](toAB(path as string), anyMonolith.controller);
     return this;

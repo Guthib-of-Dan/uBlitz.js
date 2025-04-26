@@ -28,6 +28,7 @@ var isForm = (CT: string): boolean =>
 /**
  * This function collects body and, if you specify content type (CT), parses it.
  * @description can handle "application/json" | "application/x-protobuf" | "text/plain" | "multipart/form-data" | "application/x-www-form-urlencoded"
+ * @but multipart is still a prototype. It doesn't do very well on high load yet (content-length > 400_000)
  */
 async function useBody(
   { res, CT, limit }: stdBody & { CT: SimpleCT | formCT },

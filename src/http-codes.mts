@@ -6,7 +6,7 @@ import {
   type HttpResponse,
 } from "./index.mts";
 /**
- * If something wrong is to content-length, sends 411 code and throws error WITH A REASON
+ * If something wrong is to content-length, sends 411 code and throws error with a "cause"
  */
 function checkContentLength(res: HttpResponse, req: HttpRequest): number {
   var CL = Number(req.getHeader("content-length"));
@@ -32,9 +32,9 @@ function tooLargeBody(res: HttpResponse, limit: number) {
   throw new Error("body too large", { cause: { limit } });
 }
 /**
- * Sends http 405, set http Allow header with all methods you passed
+ * Sends http 405, sets http Allow header with all methods you passed
  */
-function SeeOtherMethods(methodsArr: HttpMethods[]): HttpControllerFn {
+function seeOtherMethods(methodsArr: HttpMethods[]): HttpControllerFn {
   var code = toAB("405");
   var header = toAB("Allow");
   var methods = toAB(
@@ -47,4 +47,4 @@ function SeeOtherMethods(methodsArr: HttpMethods[]): HttpControllerFn {
   return (res) =>
     res.writeStatus(code).writeHeader(header, methods).endWithoutBody();
 }
-export { checkContentLength, badRequest, tooLargeBody, SeeOtherMethods };
+export { checkContentLength, badRequest, tooLargeBody, seeOtherMethods };

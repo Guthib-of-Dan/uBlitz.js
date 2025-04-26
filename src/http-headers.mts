@@ -75,7 +75,7 @@ var headers = {
 type BaseHeaders = Partial<typeof headers & { [key: string]: string }>;
 /**
  * A map containing all headers as ArrayBuffers, so speed remains. There are several use cases of it:
- * 1) Don't define them in requests ( post(res){new StaticHeadersMap({...baseHeaders}).toRes(res)} ). This is slow. Define maps BEFORE actual usage.
+ * 1) Don't define them in requests ( post(res){new HeadersMap({...headers}).toRes(res)} ). This is slow. Define maps BEFORE actual usage.
  * 2) as a default use StaticHeaders.default . When route isn't some LightRoute or HeavyRoute you should use .toRes(res)
  */
 class HeadersMap<Opts extends BaseHeaders> extends Map {

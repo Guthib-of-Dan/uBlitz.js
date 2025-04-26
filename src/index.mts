@@ -9,8 +9,13 @@ import { useBody } from "./body.mts";
 import { sendFile } from "./sendFile.mts";
 import { logger } from "./logger.mts";
 import { simpleProtoEnc } from "./proto.mts";
-import { checkContentLength } from "./http-codes.mjs";
-import { HeavyRoute, LightRoute, Router } from "./router.mts";
+import {
+  checkContentLength,
+  seeOtherMethods,
+  badRequest,
+  tooLargeBody,
+} from "./http-codes.mjs";
+import { HeavyRoute, LightRoute, registerAbort, Router } from "./router.mts";
 import { CSPDirs, setCSP, HeadersMap } from "./http-headers.mts";
 /**
  * An extended version of uWS.App . It provides you with several features:
@@ -102,7 +107,6 @@ function toAB(data: Buffer | string): ArrayBuffer {
     NodeBuf.byteOffset + NodeBuf.byteLength
   ) as any;
 }
-
 export {
   type HttpResponse,
   type HttpMethods,
@@ -117,11 +121,15 @@ export {
   simpleProtoEnc,
   extendApp,
   checkContentLength,
+  seeOtherMethods,
+  registerAbort,
   useBody,
   setCSP,
   sendFile,
   toAB,
   definePlugin,
+  badRequest,
+  tooLargeBody,
   CSPDirs,
   logger,
 };
