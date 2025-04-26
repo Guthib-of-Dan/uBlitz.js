@@ -1,4 +1,4 @@
-# @μBlitz/js
+# μBlitz.js
 
 Http + Websockets library, trying to combine speed, light weight and DX. It is build on top of μWebSockets.js
 
