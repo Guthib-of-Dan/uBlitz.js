@@ -25,7 +25,7 @@ If you are not familiar with core concepts of μWebSockets.js - we won't help. R
 
 I use - you can use too.
 
-## Documentation exists, but community is expected for several days of existence.
+## Documentation exists, but community is as large as you can expect from several days of existence.
 
 For now look for examples (or explore code. There is not too much to feel anxious).
 
