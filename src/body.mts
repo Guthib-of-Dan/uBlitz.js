@@ -22,6 +22,11 @@ type FilesMap = Map<
     contents: Buffer;
   }
 >;
+type formDataBody<fields extends string> = TheBody<
+  true,
+  { fields: Map<fields, string>; files: FilesMap }
+>;
+type TextBody = TheBody<true, string>;
 var isForm = (CT: string): boolean =>
   CT.startsWith("multipart/form-data") ||
   CT.startsWith("application/x-www-form-urlencoded");
@@ -30,40 +35,40 @@ var isForm = (CT: string): boolean =>
  * @description can handle "application/json" | "application/x-protobuf" | "text/plain" | "multipart/form-data" | "application/x-www-form-urlencoded"
  * @but multipart is still a prototype. It doesn't do very well on high load yet (content-length > 400_000)
  */
-async function useBody(
+async function useBody<T extends any>(
   { res, CT, limit }: stdBody & { CT: SimpleCT | formCT },
   schema?: PBType
-) {
+): Promise<TheBody<false, Error> | TheBody<true, T>> {
   var condition = CT && isForm(CT);
   logger.warn("cond", condition, CT);
   try {
-    return await (condition
+    return (await (condition
       ? parseFormDataBody({ res, CT: CT as any, limit })
-      : parseSimpleBody({ res, limit, CT: CT as any }, schema!));
+      : parseSimpleBody({ res, limit, CT: CT as any }, schema!))) as any;
   } catch (err) {
     return { ok: false, data: err as Error };
   }
 }
 
-async function parseFormDataBody(
+async function parseFormDataBody<T extends string>(
   opts: stdBody & {
     CT: formCT;
   }
-): Promise<TheBody<true, { fields: Map<string, string>; files: FilesMap }>>;
-
-async function parseFormDataBody({
-  res,
+): Promise<formDataBody<T>>;
+async function parseFormDataBody<T extends string>({
   CT,
-}: stdBody & {
+  res,
+}: // limit,
+stdBody & {
   CT: formCT;
-}): Promise<TheBody<true, { fields: Map<string, string>; files: FilesMap }>> {
+}): Promise<formDataBody<T>> {
   var emitter = new EventEmitter();
   var multipartStream = busboy({ headers: { "content-type": CT } }),
-    fields = new Map<string, string>(),
+    fields = new Map<T, string>(),
     files: FilesMap = new Map();
 
   multipartStream
-    .on("field", (name, value) => fields.set(name, value))
+    .on("field", (name, value) => fields.set(name as T, value))
     .on("file", (name, stream, { filename, mimeType }) => {
       var contents: Buffer = Buffer.alloc(0);
       stream
@@ -104,7 +109,7 @@ async function parseSimpleBody(
   opts: stdBody & {
     CT: "text/plain";
   }
-): Promise<TheBody<true, string>>;
+): Promise<TextBody>;
 
 async function parseSimpleBody(
   opts: stdBody & { CT: undefined }

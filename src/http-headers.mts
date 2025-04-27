@@ -75,38 +75,56 @@ var headers = {
 type BaseHeaders = Partial<typeof headers & { [key: string]: string }>;
 /**
  * A map containing all headers as ArrayBuffers, so speed remains. There are several use cases of it:
- * 1) Don't define them in requests ( post(res){new HeadersMap({...headers}).toRes(res)} ). This is slow. Define maps BEFORE actual usage.
- * 2) as a default use StaticHeaders.default . When route isn't some LightRoute or HeavyRoute you should use .toRes(res)
+ * 1) Don't define them in requests ( post(res){new HeadersMap({...headers}).prepare().toRes(res)} ). This is slow. Define maps BEFORE actual usage.
+ * 2) You can pass them in LightRoute or HeavyRoute (they will fill response as soon as request starts)
+ * 3) As a default use HeadersMap.default. It can't be edited, because it is already "prepared". When route isn't some LightRoute or HeavyRoute you should use .toRes(res)
  */
 class HeadersMap<Opts extends BaseHeaders> extends Map {
+  private currentHeaders: undefined | Opts;
   constructor(opts: Opts) {
     super();
-    var key: keyof Opts;
-    for (key in opts) this.set(key, opts[key]);
+    this.currentHeaders = opts;
   }
   /**
-   * remove several headers from this map
+   * remove several headers from this map. Use BEFORE map.prepare(), because it will compare them by location in memory (string !== ArrayBuffer)
+   * @example HeadersMap.default.remove("Content-Security-Policy", "X-DNS-Prefetch-Control", ...otherHeaders).prepare()
    */
   remove(...keys: (keyof Opts)[]): this {
-    keys.forEach((key) => super.delete(toAB(key as string)));
+    keys.forEach((key) => this.delete(key));
     return this;
   }
   /**
-   * write all static headers to response
+   * last function before "going to response". It converts all string to ArrayBuffers, so that you can delete some keys before it
+   * @example
+   * new HeadersMap({...HeadersMap.baseObj}).remove("Content-Security-Policy").prepare();
+   */
+  prepare(): this {
+    var key: any;
+    for (key in this.currentHeaders!)
+      this.set(toAB(key), toAB(this.currentHeaders![key] as string));
+    this.currentHeaders = undefined;
+    return this;
+  }
+  /**
+   * write all static headers to response. Use AFTER map.prepare function, if you want speed.
+   * @example
+   * headersMap.toRes(res);
+   * // if you want dynamic headers, use BASE:
+   * res.writeHeader(toAB(headerVariable),toAB(value))
    */
   toRes(res: HttpResponse): void {
     res.cork(() => this.forEach((value, key) => res.writeHeader(key, value)));
   }
   /**
-   * obj, containing basic headers , which u can use as a background for own headers
+   * obj, containing basic headers, which u can use as a background for own headers
    * @example
-   * new StaticHeaders({...StaticHeaders.baseObj, "ownHeader":"hello world"}).remove("X-Download-Options")
+   * new HeadersMap({...HeadersMap.baseObj, "ownHeader":"hello world"}).remove("X-Download-Options")
    */
   static baseObj = headers;
   /**
    * map with default headers
    */
-  static default = new HeadersMap({ ...HeadersMap.baseObj });
+  static default = new HeadersMap({ ...HeadersMap.baseObj }).prepare();
 }
 function setCSP<T extends CSP>(mainCSP: T, ...remove: (keyof CSP)[]): string {
   var key: keyof T;
@@ -116,7 +134,13 @@ function setCSP<T extends CSP>(mainCSP: T, ...remove: (keyof CSP)[]): string {
     CSPstring += `${key as string} ${(mainCSP[key] as string[]).join(" ")}; `;
   return CSPstring;
 }
-
+/**
+ * Usual CSP directories. If you want more dirs:
+ * 1) I will put more in soon
+ * 2) use string concatenation (use BASE)
+ * @example
+ * new HeadersMap({...HeadersMap.baseObj, "Content-Security-Policy":setCSP({...CSPDirs}) + " your-dir: 'self';"})
+ */
 var CSPDirs = {
   /**
    * basic urls for resources, if other directives are missing

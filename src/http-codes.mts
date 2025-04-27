@@ -17,13 +17,14 @@ function checkContentLength(res: HttpResponse, req: HttpRequest): number {
   return CL;
 }
 /**
- * sends http 400
+ * sends http 400 and throws an Error with "causeForYou"
  */
-function badRequest(res: HttpResponse, error: string) {
+function badRequest(res: HttpResponse, error: string, causeForYou: string) {
   res.writeStatus(toAB("400")).end(toAB(error));
+  throw new Error("Bad request", { cause: causeForYou });
 }
 /**
- * sends http 413
+ * sends http 413 And throws an Error with a "cause"
  */
 function tooLargeBody(res: HttpResponse, limit: number) {
   res

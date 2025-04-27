@@ -14,8 +14,21 @@ We don't offer middlewares, but if you need:
 - coloring your console
 - making your code typescript-first
 - helping with http headers and codes
+  <br>
   You ARE welcome.
 
 ## Low level remains, but in acceptable amount
 
 If you are not familiar with core concepts of μWebSockets.js - we won't help. Rather assist, after you've seen enough.
+
+## Npm package - "ublitz.js"
+
+I use - you can use too.
+
+## Documentation exists, but community is expected for several days of existence.
+
+For now look for examples (or explore code. There is not too much to feel anxious).
+
+## Typescript means sacrifice in "no time preparation"
+
+ESbuild - solid choice, bun - great, but for tests (still typescript), tsx - compiles your code on the spot, so is slow. You'll find the way to use ESbuild in examples.

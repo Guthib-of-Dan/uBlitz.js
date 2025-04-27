@@ -92,8 +92,12 @@ function bindValidate<T extends string>(
   return (field) => {
     if (validators[field](data[field])) return;
     if (!res.aborted)
-      badRequest(res, JSON.stringify(validators[field].errors![0]));
-    throw new Error("bad " + field);
+      badRequest(
+        res,
+        JSON.stringify(validators[field].errors![0]),
+        "bad " + field
+      );
+    throw new Error("bad field " + field);
   };
 }
 function setStructure<Data>(
