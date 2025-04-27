@@ -1,6 +1,6 @@
 # μBlitz.js
 
-Http + Websockets library, trying to combine speed, light weight and DX. It is build on top of μWebSockets.js
+Http + Websockets library, trying to combine speed, light weight and DX. It is built on top of μWebSockets.js
 
 ## Main purpose - handle BASE.
 
@@ -23,12 +23,12 @@ If you are not familiar with core concepts of μWebSockets.js - we won't help. R
 
 ## Npm package - "ublitz.js"
 
-I use - you can use too.
+I use - you can use it too.
 
 ## Documentation exists, but community is as large as you can expect from several days of existence.
 
 For now look for examples (or explore code. There is not too much to feel anxious).
 
-## Typescript means sacrifice in "no time preparation"
+## Using typescript means sacrificing "time of preparation"
 
 ESbuild - solid choice, bun - great, but for tests (still typescript), tsx - compiles your code on the spot, so is slow. You'll find the way to use ESbuild in examples.
