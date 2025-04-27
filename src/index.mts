@@ -14,7 +14,7 @@ import {
   seeOtherMethods,
   badRequest,
   tooLargeBody,
-} from "./http-codes.mjs";
+} from "./http-codes.mts";
 import { HeavyRoute, LightRoute, registerAbort, Router } from "./router.mts";
 import { CSPDirs, setCSP, HeadersMap } from "./http-headers.mts";
 /**
