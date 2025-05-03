@@ -8,6 +8,7 @@ import {
   type HttpResponse,
   type Server,
 } from "./index.mts";
+import { EventEmitter } from "tseep";
 import type { Static, TSchema } from "@sinclair/typebox";
 import Ajv from "ajv";
 import { badRequest, seeOtherMethods } from "./http-codes.mts";
@@ -18,16 +19,14 @@ var ajv = new Ajv();
  * @param res
  * @param cb this function is called right when request is getting aborted
  */
-function registerAbort(
-  res: HttpResponse,
-  cb?: (res: HttpResponse) => any | undefined
-): HttpResponse {
+function registerAbort(res: HttpResponse): HttpResponse {
   if (typeof res.aborted === "boolean")
     throw new Error("abort already registered");
   res.aborted = false;
+  res.emitter = new EventEmitter();
   res.onAborted(() => {
-    if (cb) cb(res);
     res.aborted = true;
+    res.emitter.emit("abort");
   });
   return res;
 }
@@ -109,7 +108,7 @@ function setStructure<Data>(
   ) => any | Promise<any>
 ): void {
   monolith.controller = async (res, req) => {
-    registerAbort(res, monolith.abortCb);
+    registerAbort(res /*monolith.abortCb*/);
     var data: any = {};
     try {
       await handler(res, req, data);
@@ -236,7 +235,7 @@ class HeavyRoute<T extends Schemas<"meta" | "body">>
     res: HttpResponse,
     req: HttpRequest,
     meta: Static<T["meta"]>
-  ) => Static<T["body"]> | Promise<Static<T["meta"]>>;
+  ) => Static<T["body"]> | Promise<Static<T["body"]>>;
   constructor(opts: heavyRouteI<T>) {
     super(opts);
     this.getMeta = opts.getMeta;
@@ -256,7 +255,7 @@ interface heavyRouteI<T extends Schemas<"meta" | "body">>
     res: HttpResponse,
     req: HttpRequest,
     meta: Static<T["meta"]>
-  ) => Static<T["body"]> | Promise<Static<T["meta"]>>;
+  ) => Static<T["body"]> | Promise<Static<T["body"]>>;
 }
 interface lightRouteI<T extends Schemas<"meta">> {
   staticHeaders?: HeadersMap<BaseHeaders>;

@@ -3,6 +3,7 @@
  */
 interface PBMessage {
   toJSON(): object;
+  [k: string]: any;
 }
 /**
  * interface of protobufjs Type, so that you aren't required to download protobufjs

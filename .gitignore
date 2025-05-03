@@ -12,7 +12,7 @@ Dockerfile
 dump.rdb
 proto.js
 proto.compiled.mjs
-package.json
 a.ts
 src/README.md
 dist
+tests/package.json

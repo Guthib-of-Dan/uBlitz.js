@@ -1,7 +1,7 @@
 import { toAB, type HttpResponse } from "./index.mts";
 var headers = {
   /**
-   * if client fetched resourse, but its MIME type is different - abort request
+   * if client fetched resource, but its MIME type is different - abort request
    */
   "X-Content-Type-Options": "nosniff",
   /**

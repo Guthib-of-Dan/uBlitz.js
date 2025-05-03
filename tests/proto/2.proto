@@ -1,5 +1,0 @@
-syntax = "proto3";
-package TWO;
-message Test {
-    uint64 number = 1;
-}

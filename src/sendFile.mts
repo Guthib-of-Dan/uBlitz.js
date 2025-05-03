@@ -1,19 +1,21 @@
 import type { RecognizedString } from "uWebSockets.js";
 import { logger, toAB, type HttpResponse } from "./index.mts";
-import { EventEmitter } from "node:events";
 import fs from "node:fs";
 /**
  * When you stream a file with a defined size, you should cork the tryEnd function. It is were this one breaks in. You "bind" this function with the response, and then every call is promised.
  * @returns ()=> Promise with return of res.tryEnd()
  */
 function bindTryEnd(
-  res: HttpResponse
-): (chunk: RecognizedString, maxSize: number) => Promise<[boolean, boolean]> {
-  return (chunk, maxSize) =>
+  res: HttpResponse,
+  totalSize: number
+): (chunk: RecognizedString) => Promise<[boolean, boolean]> {
+  return (chunk) =>
     new Promise((resolve) =>
-      res.cork(() => resolve(res.tryEnd(chunk, maxSize)))
+      res.cork(() => resolve(res.tryEnd(chunk, totalSize)))
     );
 }
+var chunkSize = 64 * 1024,
+  drainEndEvent = Symbol();
 /**
  * Efficiently send file with size over 500 megabytes with low-level tricks and automated backpressure handling.
  */
@@ -37,24 +39,26 @@ async function sendFile({
   res.cork(() => res.writeHeader(toAB("Content-Type"), toAB(contentType)));
   var maxSize = (await fs.promises.stat(path)).size;
   if (totalSize > maxSize) totalSize = maxSize;
-  var chunkSize = 64 * 1024,
-    readStream = fs.createReadStream(path, {
+  var readStream = fs.createReadStream(path, {
       highWaterMark: chunkSize,
       end: totalSize - 1,
     }),
     queue: (ArrayBuffer | undefined)[] = [],
     processingChunks = false,
-    emitter = new EventEmitter(),
-    corkedTryEnd = bindTryEnd(res),
+    corkedTryEnd = bindTryEnd(res, totalSize),
     checkIfReqEnded = (): boolean => {
-      if (res.aborted || res.done) return !!readStream.destroy();
+      if (res.aborted || res.done) {
+        readStream.destroy();
+        return !!res.emitter.removeAllListeners();
+      }
       return false;
     };
-  function onData(chunk: Buffer<ArrayBuffer>): any {
-    if (queue.length >= 64 /*4 megabytes max*/) readStream.pause();
-    if (checkIfReqEnded() || processingChunks) return queue.push(chunk.buffer);
+  function onData({ buffer }: Buffer<ArrayBuffer>): any {
+    if (queue.length >= 64 /*4 megabytes max*/ && !readStream.isPaused())
+      readStream.pause();
+    if (checkIfReqEnded() || processingChunks) return queue.push(buffer);
     processingChunks = true;
-    processChunks(queue.length > 0 ? undefined : chunk.buffer);
+    processChunks(queue.length > 0 ? undefined : buffer);
   }
   async function processChunks(buffer: ArrayBuffer | undefined): Promise<void> {
     if (!buffer && !(buffer = queue.shift())) return;
@@ -63,12 +67,14 @@ async function sendFile({
       if (readStream.isPaused() && queue.length < 32 /*2 megabytes min*/)
         readStream.resume();
       var prevOffset = res.getWriteOffset();
-      var { 0: ok, 1: done } = await corkedTryEnd(buffer!, totalSize);
+      var { 0: ok, 1: done } = await corkedTryEnd(buffer!);
       if (!ok && !done) {
         res.unsentChunk = buffer;
         res.lastOffset = prevOffset;
         res.onWritable(drainHandler);
-        await new Promise((resolve) => emitter.once("drain end", resolve));
+        await new Promise<void>((resolve) =>
+          res.emitter.once(drainEndEvent, resolve)
+        );
       }
     } while ((buffer = queue.shift()));
     processingChunks = false;
@@ -82,7 +88,7 @@ async function sendFile({
     if (ok) {
       delete res.unsentChunk;
       delete res.lastOffset;
-      emitter.emit("drain end");
+      res.emitter.emit(drainEndEvent);
     }
     return done || ok;
   }

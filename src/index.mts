@@ -5,7 +5,7 @@ import type {
 } from "uWebSockets.js";
 import type { PBType, PBMessage } from "./proto.mts";
 import { Buffer } from "node:buffer";
-import { useBody } from "./body.mts";
+import { parseFormDataBody, type FileInfo, parseSimpleBody } from "./body.mts";
 import { sendFile } from "./sendFile.mts";
 import { logger } from "./logger.mts";
 import { simpleProtoEnc } from "./proto.mts";
@@ -17,6 +17,7 @@ import {
 } from "./http-codes.mts";
 import { HeavyRoute, LightRoute, registerAbort, Router } from "./router.mts";
 import { CSPDirs, setCSP, HeadersMap } from "./http-headers.mts";
+import { EventEmitter } from "tseep";
 /**
  * An extended version of uWS.App . It provides you with several features:
  * 1) plugin registration (just like in Fastify);
@@ -53,6 +54,10 @@ var definePlugin = (plugin: PluginType): PluginType => plugin;
  * little more typed response
  */
 declare interface HttpResponse extends uwsHttpResponse {
+  emitter: EventEmitter<{
+    abort: () => void;
+    [k: symbol]: () => void;
+  }>;
   aborted?: boolean;
 }
 
@@ -114,6 +119,7 @@ export {
   type Server,
   type PBMessage,
   type PBType,
+  type FileInfo,
   HeavyRoute,
   Router,
   LightRoute,
@@ -123,7 +129,8 @@ export {
   checkContentLength,
   seeOtherMethods,
   registerAbort,
-  useBody,
+  parseFormDataBody,
+  parseSimpleBody,
   setCSP,
   sendFile,
   toAB,
