@@ -33,33 +33,26 @@ function registerAbort(res: HttpResponse): HttpResponse {
 interface routeMonolith {
   controller: HttpControllerFn;
   route: any;
-  staticHeaders?: HeadersMap<BaseHeaders>;
-  abortCb: () => any;
   errHandler: Server["_errHandler"];
 }
 function setCallbacks(monolith: routeMonolith): void {
-  var { onAbort, onError, staticHeaders } = monolith.route as
-    | LightRoute<any>
-    | HeavyRoute<any>;
+  var { onError } = monolith.route as
+    | LightRoute<any, any>
+    | HeavyRoute<any, any>;
   if (onError) monolith.errHandler = onError;
-  if (onAbort) monolith.abortCb = onAbort;
-  if (staticHeaders) monolith.staticHeaders = staticHeaders;
 }
 function setSimpleController(monolith: routeMonolith): void {
-  setStructure(monolith, async (res, req) =>
-    (monolith.route as HttpControllerFn)(res, req)
-  );
+  monolith.controller = monolith.route;
 }
 function setHeavyController(monolith: routeMonolith) {
   setCallbacks(monolith);
   type Data = Schemas<"meta" | "body">;
-  var route = monolith.route as HeavyRoute<Data>;
+  var route = monolith.route as HeavyRoute<Data, any>;
   var validators: any = {
     meta: ajv.compile(route.schemas.meta),
     body: ajv.compile(route.schemas.body),
   };
   setStructure<RequestData<Data>>(monolith, async (res, req, data) => {
-    if (monolith.staticHeaders) monolith.staticHeaders.toRes(res);
     var validate = bindValidate(res, validators, data);
     data.meta = route.getMeta(res, req);
     validate("meta");
@@ -71,12 +64,11 @@ function setHeavyController(monolith: routeMonolith) {
 function setLightController(monolith: routeMonolith): void {
   setCallbacks(monolith);
   type Data = Schemas<"meta">;
-  var route = monolith.route as LightRoute<Data>;
+  var route = monolith.route as LightRoute<Data, any>;
   var validators: any = {
     meta: ajv.compile(route.schemas.meta),
   };
   setStructure<RequestData<Data>>(monolith, async (res, req, data) => {
-    if (monolith.staticHeaders) monolith.staticHeaders.toRes(res);
     var validate = bindValidate(res, validators, data);
     data.meta = route.getMeta(res, req);
     validate("meta");
@@ -108,7 +100,7 @@ function setStructure<Data>(
   ) => any | Promise<any>
 ): void {
   monolith.controller = async (res, req) => {
-    registerAbort(res /*monolith.abortCb*/);
+    registerAbort(res);
     var data: any = {};
     try {
       await handler(res, req, data);
@@ -150,7 +142,6 @@ class Router<Opts extends routerOpts> {
       var monolith: routeMonolith = {
         controller: () => {},
         route: this.options[path][method] as any,
-        abortCb: this.server!._abortCb!,
         errHandler: this.server!._errHandler!,
       };
       if (monolith.route instanceof HeavyRoute) setHeavyController(monolith);
@@ -166,7 +157,6 @@ class Router<Opts extends routerOpts> {
     var anyMonolith: routeMonolith = {
       controller: () => {},
       route: undefined,
-      abortCb: this.server!._abortCb!,
       errHandler: this.server!._errHandler!,
     };
     var controller: HttpControllerFn = this.options[path]["any"] as any;
@@ -181,7 +171,9 @@ class Router<Opts extends routerOpts> {
 /**
  * route WITHOUT body
  */
-class LightRoute<T extends Schemas<"meta">> implements lightRouteI<T> {
+class LightRoute<T extends Schemas<"meta">, Shared>
+  implements lightRouteI<T, Shared>
+{
   staticHeaders?: HeadersMap<BaseHeaders>;
   /**
    * function which prepares the request data for the validation (headers, parameters, querystring).
@@ -193,16 +185,13 @@ class LightRoute<T extends Schemas<"meta">> implements lightRouteI<T> {
    */
   schemas: T;
   /**
-   * additional callback on request abort. Can't be anything tied to request or response objects
-   */
-  onAbort?: () => void;
-  /**
    * @param error - what happened
    * @param res - you can close the connection after error, but only if it wasn't aborted before
    * @param data - the data, you returned from preparator as additional request info
    * @returns
    */
   onError?: (error: Error, res: HttpResponse, data: RequestData<T>) => any;
+  shared?: Shared;
   /**
    * @param data same as described in this.schemas, but validated
    */
@@ -211,10 +200,9 @@ class LightRoute<T extends Schemas<"meta">> implements lightRouteI<T> {
     req: HttpRequest,
     data: RequestData<T>
   ) => any | Promise<any>;
-  constructor(opts: lightRouteI<T>) {
-    this.staticHeaders = opts.staticHeaders;
+  constructor(opts: lightRouteI<T, Shared>) {
+    this.shared = opts.shared;
     this.schemas = opts.schemas;
-    this.onAbort = opts.onAbort;
     this.onError = opts.onError;
     this.handler = opts.handler;
     this.getMeta = opts.getMeta;
@@ -223,9 +211,9 @@ class LightRoute<T extends Schemas<"meta">> implements lightRouteI<T> {
 /**
  * route WiTH body
  */
-class HeavyRoute<T extends Schemas<"meta" | "body">>
-  extends LightRoute<T>
-  implements heavyRouteI<T>
+class HeavyRoute<T extends Schemas<"meta" | "body">, Shared>
+  extends LightRoute<T, Shared>
+  implements heavyRouteI<T, Shared>
 {
   /**
    * @param meta data, returned from this.getMeta
@@ -236,7 +224,7 @@ class HeavyRoute<T extends Schemas<"meta" | "body">>
     req: HttpRequest,
     meta: Static<T["meta"]>
   ) => Static<T["body"]> | Promise<Static<T["body"]>>;
-  constructor(opts: heavyRouteI<T>) {
+  constructor(opts: heavyRouteI<T, Shared>) {
     super(opts);
     this.getMeta = opts.getMeta;
     this.parseBody = opts.parseBody;
@@ -249,19 +237,18 @@ type Schemas<Keys extends string = string> = Record<Keys, TSchema>;
 type RequestData<T extends Schemas> = {
   [type in keyof T]: Static<T[type]>;
 };
-interface heavyRouteI<T extends Schemas<"meta" | "body">>
-  extends lightRouteI<T> {
+interface heavyRouteI<T extends Schemas<"meta" | "body">, Shared>
+  extends lightRouteI<T, Shared> {
   parseBody: (
     res: HttpResponse,
     req: HttpRequest,
     meta: Static<T["meta"]>
   ) => Static<T["body"]> | Promise<Static<T["body"]>>;
 }
-interface lightRouteI<T extends Schemas<"meta">> {
-  staticHeaders?: HeadersMap<BaseHeaders>;
+interface lightRouteI<T extends Schemas<"meta">, Shared> {
   getMeta: (res: HttpResponse, req: HttpRequest) => Static<T["meta"]>;
+  shared?: Shared;
   schemas: T;
-  onAbort?: () => void;
   onError?: (error: Error, res: HttpResponse, data: RequestData<T>) => any;
   handler: (
     res: HttpResponse,
@@ -275,7 +262,7 @@ type routerOpts = Record<
   Partial<{
     /*method*/ [Method in HttpMethods]: Method extends "ws"
       ? WebSocketBehavior<any>
-      : HeavyRoute<any> | LightRoute<any> | HttpControllerFn;
+      : HeavyRoute<any, any> | LightRoute<any, any> | HttpControllerFn;
   }>
 >;
 //#endregion

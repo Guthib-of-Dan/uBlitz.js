@@ -21,12 +21,11 @@ import { EventEmitter } from "tseep";
 /**
  * An extended version of uWS.App . It provides you with several features:
  * 1) plugin registration (just like in Fastify);
- * 2) adding global error handling (which you can overwrite in Router.heavyRoute)
- * 3) global callback on request abort
+ * 2) adding global error handling (which you can be overwritten in LightRoute or HeavyRoute)
  */
 declare interface Server extends TemplatedApp {
   /**
-   * It is same as plugins in Fastify => you register some routes in remove file
+   * It is same as plugins in Fastify -> you register some routes in remove file
    * @param plugin
    * @returns itself for chaining methods
    */
@@ -34,11 +33,6 @@ declare interface Server extends TemplatedApp {
   /** set global errorHandler*/
   onError(fn: (error: Error, res: HttpResponse, data: any) => any): Server;
   _errHandler?(error: Error, res: HttpResponse, data: any): any;
-  /**
-   * global callback on abort. Can be rewritten on specific route using Router.heaveRoute.onAbort
-   */
-  globalOnAbort(fn: () => any): Server;
-  _abortCb?(): any;
 }
 /**
  * function, you pass in definePlugin. Here you can register
@@ -54,10 +48,16 @@ var definePlugin = (plugin: PluginType): PluginType => plugin;
  * little more typed response
  */
 declare interface HttpResponse extends uwsHttpResponse {
+  /**
+   * An event emitter, which lets you subscribe several listeners to "abort" event OR your own events, defined with Symbol().
+   */
   emitter: EventEmitter<{
     abort: () => void;
     [k: symbol]: () => void;
   }>;
+  /**
+   * changes when res.onAborted fires.
+   */
   aborted?: boolean;
 }
 
@@ -92,10 +92,6 @@ function extendApp(App: TemplatedApp): Server {
   };
   server.onError = function (fn) {
     server._errHandler = fn;
-    return this;
-  };
-  server.globalOnAbort = function (fn) {
-    this._abortCb = fn;
     return this;
   };
 

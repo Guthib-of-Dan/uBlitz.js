@@ -1,11 +1,11 @@
 import { extendApp, toAB, logger } from "../src/index.mts"; //npm: import {extendApp} from "ublitz.js"
 import uWS from "uWebSockets.js";
-import router from "./router.mts";
+import staticRouter from "./static.mts";
+import validatedRouter from "./light_validation.mjs";
 const PORT = 9001;
 const HOST = toAB("localhost");
 logger.log("here");
 extendApp(uWS.App())
-  .globalOnAbort(() => logger.warn("request aborted"))
   .onError((err, res, data) => {
     logger.group("Some error");
     logger.error("somewhere happened this", err);
@@ -13,7 +13,8 @@ extendApp(uWS.App())
     logger.log("data about request", data);
     logger.groupEnd();
   })
-  .register(router)
+  .register(staticRouter)
+  .register(validatedRouter)
   .any(
     "/*",
     (res) => void res.writeStatus(toAB("404")).end(toAB("Not found this route"))
