@@ -15,10 +15,9 @@ extendApp(uWS.App())
   })
   .register(staticRouter)
   .register(validatedRouter)
-  .any(
-    "/*",
-    (res) => void res.writeStatus(toAB("404")).end(toAB("Not found this route"))
-  )
+  .any("/*", (res) => {
+    res.writeStatus(toAB("404")).end(toAB("Not found this route"));
+  })
   .listen(HOST, PORT, (socket) => {
     if (!socket) logger.error("Server is NOT listening");
     logger.info("Server is listening on port: " + PORT + ", host: localhost");

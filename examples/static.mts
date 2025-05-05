@@ -1,4 +1,4 @@
-import { definePlugin, HeadersMap, sendFile } from "../src/index.mts";
+import { definePlugin, HeadersMap, logger, sendFile } from "../src/index.mts";
 import { registerAbort, Router } from "../src/router.mts"; // or "ublitz.js"
 const router = new Router({
   "/": {
@@ -28,14 +28,15 @@ const router = new Router({
     },
   },
   "/text.txt": {
-    get(res) {
+    async get(res) {
       registerAbort(res);
-      sendFile({
+      const error = await sendFile({
         res,
         contentType: "text/plain",
         path: "./text.txt",
         totalSize: Infinity,
       });
+      logger.log("Finished with error?", error);
     },
   },
 });

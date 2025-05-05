@@ -1,6 +1,5 @@
 import type { HttpRequest, WebSocketBehavior } from "uWebSockets.js";
 import {
-  HeadersMap,
   logger,
   toAB,
   type HttpControllerFn,
@@ -12,7 +11,6 @@ import { EventEmitter } from "tseep";
 import type { Static, TSchema } from "@sinclair/typebox";
 import Ajv from "ajv";
 import { badRequest, seeOtherMethods } from "./http-codes.mts";
-import type { BaseHeaders } from "./http-headers.mts";
 var ajv = new Ajv();
 /**
  * function to effortlessly mark response as aborted
@@ -34,46 +32,6 @@ interface routeMonolith {
   controller: HttpControllerFn;
   route: any;
   errHandler: Server["_errHandler"];
-}
-function setCallbacks(monolith: routeMonolith): void {
-  var { onError } = monolith.route as
-    | LightRoute<any, any>
-    | HeavyRoute<any, any>;
-  if (onError) monolith.errHandler = onError;
-}
-function setSimpleController(monolith: routeMonolith): void {
-  monolith.controller = monolith.route;
-}
-function setHeavyController(monolith: routeMonolith) {
-  setCallbacks(monolith);
-  type Data = Schemas<"meta" | "body">;
-  var route = monolith.route as HeavyRoute<Data, any>;
-  var validators: any = {
-    meta: ajv.compile(route.schemas.meta),
-    body: ajv.compile(route.schemas.body),
-  };
-  setStructure<RequestData<Data>>(monolith, async (res, req, data) => {
-    var validate = bindValidate(res, validators, data);
-    data.meta = route.getMeta(res, req);
-    validate("meta");
-    data.body = await route.parseBody(res, req, data.meta);
-    validate("body");
-    await route.handler(res, req, data);
-  });
-}
-function setLightController(monolith: routeMonolith): void {
-  setCallbacks(monolith);
-  type Data = Schemas<"meta">;
-  var route = monolith.route as LightRoute<Data, any>;
-  var validators: any = {
-    meta: ajv.compile(route.schemas.meta),
-  };
-  setStructure<RequestData<Data>>(monolith, async (res, req, data) => {
-    var validate = bindValidate(res, validators, data);
-    data.meta = route.getMeta(res, req);
-    validate("meta");
-    await route.handler(res, req, data);
-  });
 }
 function bindValidate<T extends string>(
   res: HttpResponse,
@@ -111,8 +69,8 @@ function setStructure<Data>(
 }
 /**
  * @author me: "Route's description is the route itself".
- * @description No need to separate controller and call it like "app.post("/createDbUser",createDbUser)", if names are same.
- * With this you specify route, then its methods, then many routes as well. Just this.
+ * @description No need to separate controller and call it like "app.post("/createDbUser",createDbUser)", if names are the same.
+ * With this class you specify route and then its methods. Just this.
  */
 class Router<Opts extends routerOpts> {
   private options: Opts;
@@ -144,10 +102,45 @@ class Router<Opts extends routerOpts> {
         route: this.options[path][method] as any,
         errHandler: this.server!._errHandler!,
       };
-      if (monolith.route instanceof HeavyRoute) setHeavyController(monolith);
-      else if (monolith.route instanceof LightRoute)
-        setLightController(monolith);
-      else setSimpleController(monolith);
+      if (
+        monolith.route instanceof HeavyRoute ||
+        monolith.route instanceof LightRoute
+      ) {
+        const isAsync = (fn: any) => fn[Symbol.toStringTag] === "AsyncFunction",
+          route = monolith.route as LightRoute<any, any> | HeavyRoute<any, any>,
+          isRouteHeavy = route instanceof HeavyRoute,
+          errorHandler = route.onError || this.server!._errHandler,
+          isParseBodyAsync = isRouteHeavy && isAsync(route.parseBody),
+          isErrorHandlerAsync = isAsync(errorHandler || 0),
+          isFinalHandlerAsync =
+            isAsync(route.handler) || isParseBodyAsync ? "async" : "",
+          catchBlock = errorHandler
+            ? `catch(error){${
+                isErrorHandlerAsync ? "await " : ""
+              }onErr(error,res,data);}`
+            : "catch{};",
+          validators = `var vals={meta:ajv.compile(route.schemas.meta),${
+            isRouteHeavy ? "body:ajv.compile(route.schemas.body)," : ""
+          }};`,
+          bodyValidation = isRouteHeavy
+            ? `data.body=${
+                isParseBodyAsync ? "await" : ""
+              } route.parseBody(res,req,data.meta);val("body");`
+            : "",
+          metaValidation = "data.meta=route.getMeta(res, req);val('meta');",
+          userHandler =
+            (isAsync(route.handler) ? "await " : "") +
+            "route.handler(res,req,data);",
+          vars = "regAb(res);var data={},val=bindVal(res,vals,data);";
+        monolith.controller = new Function(
+          "regAb",
+          "onErr",
+          "ajv",
+          "route",
+          "bindVal",
+          `${validators}return ${isFinalHandlerAsync}(res,req)=>{${vars}try{${metaValidation}${bodyValidation}${userHandler}}${catchBlock}}`
+        )(registerAbort, errorHandler, ajv, route, bindValidate);
+      } else monolith.controller = monolith.route;
       (this.server as any)[method](toAB(path as string), monolith.controller);
     });
     if (methods.includes("ws")) {
@@ -174,7 +167,6 @@ class Router<Opts extends routerOpts> {
 class LightRoute<T extends Schemas<"meta">, Shared>
   implements lightRouteI<T, Shared>
 {
-  staticHeaders?: HeadersMap<BaseHeaders>;
   /**
    * function which prepares the request data for the validation (headers, parameters, querystring).
    * @returns data, which will be validated with this.schemas.meta

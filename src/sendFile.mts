@@ -1,5 +1,5 @@
 import type { RecognizedString } from "uWebSockets.js";
-import { logger, toAB, type HttpResponse } from "./index.mts";
+import { toAB, type HttpResponse } from "./index.mts";
 import fs from "node:fs";
 /**
  * When you stream a file with a defined size, you should cork the tryEnd function. It is were this one breaks in. You "bind" this function with the response, and then every call is promised.
@@ -15,9 +15,11 @@ function bindTryEnd(
     );
 }
 var chunkSize = 64 * 1024,
-  drainEndEvent = Symbol();
+  drainEndEvent = Symbol(),
+  globalEndEvent = Symbol();
 /**
- * Efficiently send file with size over 500 megabytes with low-level tricks and automated backpressure handling.
+ * Efficiently send file with size over 500 megabytes with low-level tricks and automated backpressure handling. Automatically closes the response if an error happens.
+ * @returns Error or undefined (if ok).
  */
 async function sendFile({
   path,
@@ -31,19 +33,27 @@ async function sendFile({
     done?: boolean;
     unsentChunk?: ArrayBuffer;
     lastOffset?: number;
+    error?: undefined | Error;
   };
   totalSize: number;
-}): Promise<void> {
+}): Promise<undefined | Error> {
   //!__________important
-  res.done = false;
   res.cork(() => res.writeHeader(toAB("Content-Type"), toAB(contentType)));
-  var maxSize = (await fs.promises.stat(path)).size;
-  if (totalSize > maxSize) totalSize = maxSize;
-  var readStream = fs.createReadStream(path, {
+  try {
+    var maxSize = (await fs.promises.stat(path)).size;
+    if (totalSize > maxSize) totalSize = maxSize;
+    var readStream: fs.ReadStream;
+    readStream = fs.createReadStream(path, {
       highWaterMark: chunkSize,
       end: totalSize - 1,
-    }),
-    queue: (ArrayBuffer | undefined)[] = [],
+    });
+  } catch (error) {
+    console.log("error", error);
+    res.cork(() => res.close());
+    return error as Error;
+  }
+
+  var queue: (ArrayBuffer | undefined)[] = [],
     processingChunks = false,
     corkedTryEnd = bindTryEnd(res, totalSize),
     checkIfReqEnded = (): boolean => {
@@ -52,7 +62,8 @@ async function sendFile({
         return !!res.emitter.removeAllListeners();
       }
       return false;
-    };
+    },
+    readEnded: boolean = false;
   function onData({ buffer }: Buffer<ArrayBuffer>): any {
     if (queue.length >= 64 /*4 megabytes max*/ && !readStream.isPaused())
       readStream.pause();
@@ -63,11 +74,12 @@ async function sendFile({
   async function processChunks(buffer: ArrayBuffer | undefined): Promise<void> {
     if (!buffer && !(buffer = queue.shift())) return;
     do {
-      if (checkIfReqEnded()) break;
+      if (checkIfReqEnded()) return;
       if (readStream.isPaused() && queue.length < 32 /*2 megabytes min*/)
         readStream.resume();
       var prevOffset = res.getWriteOffset();
       var { 0: ok, 1: done } = await corkedTryEnd(buffer!);
+      res.done = done;
       if (!ok && !done) {
         res.unsentChunk = buffer;
         res.lastOffset = prevOffset;
@@ -77,6 +89,9 @@ async function sendFile({
         );
       }
     } while ((buffer = queue.shift()));
+
+    if (readEnded && res.done) res.emitter.emit(globalEndEvent);
+
     processingChunks = false;
   }
   function drainHandler(offset: number): boolean {
@@ -90,12 +105,30 @@ async function sendFile({
       delete res.lastOffset;
       res.emitter.emit(drainEndEvent);
     }
+    if (done) res.emitter.emit(globalEndEvent);
     return done || ok;
   }
-
+  res.emitter.once("abort", () => {
+    if (!res.error) res.error = new Error("Aborted");
+    readStream.destroy();
+    res.emitter.emit(globalEndEvent);
+  });
   //!___________registration
   readStream
     .on("data", onData as any)
-    .once("error", (err) => logger.error("error", err));
+    .once("error", (err) => {
+      if (!res.aborted) res.close();
+      if (!res.error) res.error = err;
+      res.emitter.emit(globalEndEvent);
+    })
+    .once("end", () => {
+      readEnded = true;
+      if (!processingChunks) res.emitter.emit(globalEndEvent);
+    });
+  await new Promise<void | Error>((resolve) => {
+    res.emitter.once(globalEndEvent, resolve);
+  });
+  readStream.removeAllListeners();
+  return res.error;
 }
 export { sendFile };

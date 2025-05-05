@@ -53,7 +53,7 @@ declare interface HttpResponse extends uwsHttpResponse {
    */
   emitter: EventEmitter<{
     abort: () => void;
-    [k: symbol]: () => void;
+    [k: symbol]: (...any: any[]) => void;
   }>;
   /**
    * changes when res.onAborted fires.
