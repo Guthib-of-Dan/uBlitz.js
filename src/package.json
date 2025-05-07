@@ -1,6 +1,6 @@
 {
   "name": "ublitz.js",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "This package collects several utilities for uWebSockets.js, which can simplify the development",
   "keywords": [
     "uwebsocketsjs",
