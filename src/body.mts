@@ -163,9 +163,11 @@ async function parseFormDataBody<T extends "disk" | "memory">({
               logger.log("END FILE READ");
               if (res.aborted) return;
               if (!stream.readableDidRead) return deleteEmptyFile();
-              new Promise<void>((resolve) =>
-                fileEmitter.once(wroteToDiskFileEvent, resolve)
-              ).then(() => writeStream.end());
+              if (processingQueue)
+                new Promise<void>((resolve) =>
+                  fileEmitter.once(wroteToDiskFileEvent, resolve)
+                ).then(() => writeStream.end());
+              else writeStream.end();
             })
             .once("error", (err) => {
               queue = [];

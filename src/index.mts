@@ -14,10 +14,25 @@ import {
   seeOtherMethods,
   badRequest,
   tooLargeBody,
+  notFoundConstructor,
 } from "./http-codes.mts";
-import { HeavyRoute, LightRoute, registerAbort, Router } from "./router.mts";
+import { HeavyMethod, LightMethod, Router } from "./router.mts";
 import { CSPDirs, setCSP, HeadersMap } from "./http-headers.mts";
 import { EventEmitter } from "tseep";
+/**
+ * function to effortlessly mark response as aborted AND to attach an event emitter, so that you can easily scale the handler. If you don't need event emitter and only some res.aborted - set it by yourself (no overkill for the handler)
+ * @param res
+ */
+function registerAbort(res: HttpResponse): HttpResponse {
+  if (typeof res.aborted === "boolean")
+    throw new Error("abort already registered");
+  res.aborted = false;
+  res.emitter = new EventEmitter();
+  return res.onAborted(() => {
+    res.aborted = true;
+    res.emitter.emit("abort");
+  }) as any;
+}
 /**
  * An extended version of uWS.App . It provides you with several features:
  * 1) plugin registration (just like in Fastify);
@@ -53,12 +68,16 @@ declare interface HttpResponse extends uwsHttpResponse {
    */
   emitter: EventEmitter<{
     abort: () => void;
-    [k: symbol]: () => void;
+    [k: symbol]: (...any: any[]) => void;
   }>;
   /**
    * changes when res.onAborted fires.
    */
   aborted?: boolean;
+  /**
+   * You should set it manually when ending the response. Particularly useful if some error has fired and you are doubting whether res.aborted is a sufficient flag.
+   */
+  finished: boolean;
 }
 
 declare type HttpControllerFn = (
@@ -108,6 +127,7 @@ function toAB(data: Buffer | string): ArrayBuffer {
     NodeBuf.byteOffset + NodeBuf.byteLength
   ) as any;
 }
+
 export {
   type HttpResponse,
   type HttpMethods,
@@ -116,10 +136,11 @@ export {
   type PBMessage,
   type PBType,
   type FileInfo,
-  HeavyRoute,
+  HeavyMethod,
   Router,
-  LightRoute,
+  LightMethod,
   HeadersMap,
+  notFoundConstructor,
   simpleProtoEnc,
   extendApp,
   checkContentLength,

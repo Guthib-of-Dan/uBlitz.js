@@ -3,7 +3,7 @@ import {
   Router,
   definePlugin,
   toAB,
-  LightRoute,
+  LightMethod,
   HeadersMap,
   logger,
 } from "../src/index.mts";
@@ -13,9 +13,9 @@ users.set("u1", { seen: new Date() });
 users.set("u2", { seen: new Date("2000") });
 var router = new Router({
   "/users/:id": {
-    get: new LightRoute({
+    get: new LightMethod({
       shared: {
-        headers: HeadersMap.default,
+        setHeaders: HeadersMap.default,
       },
       schemas: {
         meta: Type.Object({
@@ -25,7 +25,7 @@ var router = new Router({
       // if something may be different you always use "as any" or "!", because for this exists validation.
       getMeta: (_, req) => ({ id: req.getParameter(0)! }),
       async handler(res, _, data) {
-        this.shared!.headers.toRes(res);
+        this.shared!.setHeaders(res);
         res.emitter.once("abort", () => {
           logger.warn(`/users/${data.meta.id} was aborted`);
         });
@@ -36,6 +36,10 @@ var router = new Router({
               toAB(JSON.stringify(users.get(data.meta.id) || { seen: "never" }))
             )
           );
+      },
+      onError(error, res) {
+        if (!res.aborted && !res.finished) res.close();
+        logger.error("ERROR", error);
       },
     }),
   },

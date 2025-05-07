@@ -34,15 +34,16 @@ import { Type } from "@sinclair/typebox";
 const router = new Router({
   "/": {
     // functional controller
-    get(res) {
-      HeadersMap.default.toRes(res); // set "helmet-like" headers (they are ArrayBuffers)
-      sendFile({
+    async get(res) {
+      HeadersMap.default(res); // set "helmet-like" headers (they are ArrayBuffers)
+      const error = await sendFile({
         res,
         path: "index.html",
         contentType: "text/html",
         //total size === size, which will be sent in bytes. Infinity === as much, as file has.
         totalSize: Infinity,
       });
+      if (error) logger.error("ERROR", error);
     },
     post() {}, // Many methods at once
   },
