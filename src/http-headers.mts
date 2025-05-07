@@ -1,78 +1,124 @@
 import { toAB, type HttpResponse } from "./index.mts";
-var headers = {
-  /**
-   * if client fetched resource, but its MIME type is different - abort request
-   */
+import type { HttpResponse as uwsHttpResponse } from "uWebSockets.js";
+var helmetHeaders = {
   "X-Content-Type-Options": "nosniff",
-  /**
-   * Safari doesn't support it
-   */
-  "X-DNS-Prefetch-Control": "off" as "on" | "off",
-  /**
-   * Sites can use this to avoid clickjacking (<iframe> html tag)
-   */
+  "X-DNS-Prefetch-Control": "off",
   "X-Frame-Options": "DENY" as "DENY" | "SAMEORIGIN",
-  /**
-   * whether you need info about client.
-   */
-  "Referrer-Policy": "same-origin" as
-    | "no-referrer"
-    | "no-referrer-when-downgrade"
-    | "origin"
-    | "origin-when-cross-origin"
-    | "same-origin"
-    | "strict-origin"
-    | "strict-origin-when-cross-origin"
-    | "unsafe-url",
-  /**
-   * usually for Adobe Acrobat or Microsoft Silverlight.
-   */
-  "X-Permitted-Cross-Domain-Policies": "none" as
-    | "none"
-    | "master-only"
-    | "by-content-type"
-    | "by-ftp-filename"
-    | "all"
-    | "none-this-response",
-  /**
-   * Whether downloaded files should be run on the client side immediately. For IE8
-   */
+  "Referrer-Policy": "same-origin",
+  "X-Permitted-Cross-Domain-Policies": "none",
   "X-Download-Options": "noopen",
-  /**
-   * From where should client fetch resources
-   */
-  "Cross-Origin-Resource-Policy": "same-origin" as
-    | "same-site"
-    | "same-origin"
-    | "cross-origin",
-  /**
-   * whether new page opened via Window.open() should be treated differently for performance reasons
-   */
-  "Cross-Origin-Opener-Policy": "same-origin" as
-    | "unsafe-none"
-    | "same-origin-allow-popups"
-    | "same-origin"
-    | "noopener-allow-popups",
-  /**
-   *  By adding this header you can declare that your site should only load resources that have explicitly opted-in to being loaded across origins.
-   * "require-corp" LETS YOU USE new SharedArrayBuffer()
-   */
-  "Cross-Origin-Embedder-Policy": "require-corp" as
-    | "unsafe-none"
-    | "require-corp"
-    | "credentialless",
-  /**
-   * similar to COOP, where ?1 is true
-   */
-  "Origin-Agent-Cluster": "?1" as "?0" | "?1",
-  /**
-   * get it from setCSP()
-   */
-  "Content-Security-Policy": "" as string,
+  "Cross-Origin-Resource-Policy": "same-origin",
+  "Cross-Origin-Opener-Policy": "same-origin",
+  "Cross-Origin-Embedder-Policy": "require-corp",
+  "Origin-Agent-Cluster": "?1",
   //"Content-Security-Policy-Report-Only":"",
   //"Strict-Transport-Security":`max-age=${60 * 60 * 24 * 365}; includeSubDomains`,
-} as const;
-type BaseHeaders = Partial<typeof headers & { [key: string]: string }>;
+} as const satisfies Partial<BaseHeaders>;
+type BaseHeaders = Partial<
+  {
+    /**
+     * if client fetched resource, but its MIME type is different - abort request
+     */
+    "X-Content-Type-Options": "nosniff";
+    /**
+     * Safari doesn't support it
+     */
+    "X-DNS-Prefetch-Control": "on" | "off";
+    /**
+     * Sites can use this to avoid clickjacking (<iframe> html tag)
+     */
+    "X-Frame-Options": "DENY" | "SAMEORIGIN";
+    /**
+     * whether you need info about client.
+     */
+    "Referrer-Policy":
+      | "no-referrer"
+      | "no-referrer-when-downgrade"
+      | "origin"
+      | "origin-when-cross-origin"
+      | "same-origin"
+      | "strict-origin"
+      | "strict-origin-when-cross-origin"
+      | "unsafe-url";
+    /**
+     * usually for Adobe Acrobat or Microsoft Silverlight.
+     */
+    "X-Permitted-Cross-Domain-Policies":
+      | "none"
+      | "master-only"
+      | "by-content-type"
+      | "by-ftp-filename"
+      | "all"
+      | "none-this-response";
+    /**
+     * Whether downloaded files should be run on the client side immediately. For IE8
+     */
+    "X-Download-Options": "noopen";
+    /**
+     * From where should client fetch resources
+     */
+    "Cross-Origin-Resource-Policy":
+      | "same-site"
+      | "same-origin"
+      | "cross-origin";
+    /**
+     * whether new page opened via Window.open() should be treated differently for performance reasons
+     */
+    "Cross-Origin-Opener-Policy":
+      | "unsafe-none"
+      | "same-origin-allow-popups"
+      | "same-origin"
+      | "noopener-allow-popups";
+    /**
+     *  By adding this header you can declare that your site should only load resources that have explicitly opted-in to being loaded across origins.
+     * "require-corp" LETS YOU USE new SharedArrayBuffer()
+     */
+    "Cross-Origin-Embedder-Policy":
+      | "unsafe-none"
+      | "require-corp"
+      | "credentialless";
+    /**
+     * similar to COOP, where ?1 is true
+     */
+    "Origin-Agent-Cluster": "?0" | "?1";
+    /**
+     * get it from setCSP()
+     */
+    "Content-Security-Policy": string;
+    //"Content-Security-Policy-Report-Only":"",
+    //"Strict-Transport-Security":`max-age=${60 * 60 * 24 * 365}; includeSubDomains`,
+    /**
+     * Allowed origins to get the resource. * - all, https://example.com - some website.
+     */
+    "Access-Control-Allow-Origin": string;
+    /**
+     * Allowed headers in the request.
+     */
+    "Access-Control-Allow-Headers": string;
+    /**
+     * CORS version of Allow header
+     */
+    "Access-Control-Allow-Methods": string;
+    /**
+     * How much time the response should be cached.
+     * 1) must-revalidate
+     * 2) no-cache
+     * 3) no-store
+     * 4) no-transform
+     * 5) public -> cached anyhow
+     * 6) private
+     * 7) proxy-revalidate
+     * 8) max-age=<seconds>
+     * 9) s-maxage=<seconds>;
+     * @but those below aren't supported everywhere:
+     * 1) immutable
+     * 2) stale-while-revalidate=<seconds>
+     * 3) stale-if-error=<seconds>
+     */
+    "Cache-Control": string;
+    "Access-Control-Max-Age": string;
+  } & { [key: string]: string }
+>;
 /**
  * A map containing all headers as ArrayBuffers, so speed remains. There are several use cases of it:
  * 1) Don't define them in requests ( post(res){new HeadersMap({...headers}).prepare().toRes(res)} ). This is slow. Define maps BEFORE actual usage.
@@ -80,7 +126,7 @@ type BaseHeaders = Partial<typeof headers & { [key: string]: string }>;
  * 3) As a default use HeadersMap.default. It can't be edited, because it is already "prepared". When route isn't some LightRoute or HeavyRoute you should use .toRes(res)
  */
 class HeadersMap<Opts extends BaseHeaders> extends Map {
-  private currentHeaders: undefined | Opts;
+  public currentHeaders: undefined | Opts;
   constructor(opts: Opts) {
     super();
     this.currentHeaders = opts;
@@ -90,7 +136,7 @@ class HeadersMap<Opts extends BaseHeaders> extends Map {
    * @example HeadersMap.default.remove("Content-Security-Policy", "X-DNS-Prefetch-Control", ...otherHeaders).prepare()
    */
   remove(...keys: (keyof Opts)[]): this {
-    keys.forEach((key) => this.delete(key));
+    keys.forEach((key) => delete this.currentHeaders![key]);
     return this;
   }
   /**
@@ -98,12 +144,11 @@ class HeadersMap<Opts extends BaseHeaders> extends Map {
    * @example
    * new HeadersMap({...HeadersMap.baseObj}).remove("Content-Security-Policy").prepare();
    */
-  prepare(): this {
-    var key: any;
-    for (key in this.currentHeaders!)
+  prepare(): (res: uwsHttpResponse) => HttpResponse {
+    for (const key in this.currentHeaders!)
       this.set(toAB(key), toAB(this.currentHeaders![key] as string));
     this.currentHeaders = undefined;
-    return this;
+    return (res) => this.toRes(res);
   }
   /**
    * write all static headers to response. Use AFTER map.prepare function, if you want speed.
@@ -112,15 +157,17 @@ class HeadersMap<Opts extends BaseHeaders> extends Map {
    * // if you want dynamic headers, use BASE:
    * res.writeHeader(toAB(headerVariable),toAB(value))
    */
-  toRes(res: HttpResponse): void {
-    res.cork(() => this.forEach((value, key) => res.writeHeader(key, value)));
-  }
+  toRes = (res: uwsHttpResponse): HttpResponse =>
+    res.cork(() =>
+      this.forEach((value, key) => res.writeHeader(key, value))
+    ) as any;
+
   /**
    * obj, containing basic headers, which u can use as a background for own headers
    * @example
    * new HeadersMap({...HeadersMap.baseObj, "ownHeader":"hello world"}).remove("X-Download-Options")
    */
-  static baseObj = headers;
+  static baseObj = helmetHeaders;
   /**
    * map with default headers
    */

@@ -7,27 +7,12 @@ import {
   type HttpResponse,
   type Server,
 } from "./index.mts";
-import { EventEmitter } from "tseep";
+import { registerAbort } from "./index.mts";
 import type { Static, TSchema } from "@sinclair/typebox";
 import Ajv from "ajv";
 import { badRequest, seeOtherMethods } from "./http-codes.mts";
 var ajv = new Ajv();
-/**
- * function to effortlessly mark response as aborted
- * @param res
- * @param cb this function is called right when request is getting aborted
- */
-function registerAbort(res: HttpResponse): HttpResponse {
-  if (typeof res.aborted === "boolean")
-    throw new Error("abort already registered");
-  res.aborted = false;
-  res.emitter = new EventEmitter();
-  res.onAborted(() => {
-    res.aborted = true;
-    res.emitter.emit("abort");
-  });
-  return res;
-}
+
 interface routeMonolith {
   controller: HttpControllerFn;
   route: any;
@@ -58,6 +43,7 @@ function setStructure<Data>(
   ) => any | Promise<any>
 ): void {
   monolith.controller = async (res, req) => {
+    logger.log("any");
     registerAbort(res);
     var data: any = {};
     try {
@@ -103,12 +89,14 @@ class Router<Opts extends routerOpts> {
         errHandler: this.server!._errHandler!,
       };
       if (
-        monolith.route instanceof HeavyRoute ||
-        monolith.route instanceof LightRoute
+        monolith.route instanceof HeavyMethod ||
+        monolith.route instanceof LightMethod
       ) {
         const isAsync = (fn: any) => fn[Symbol.toStringTag] === "AsyncFunction",
-          route = monolith.route as LightRoute<any, any> | HeavyRoute<any, any>,
-          isRouteHeavy = route instanceof HeavyRoute,
+          route = monolith.route as
+            | LightMethod<any, any>
+            | HeavyMethod<any, any>,
+          isRouteHeavy = route instanceof HeavyMethod,
           errorHandler = route.onError || this.server!._errHandler,
           isParseBodyAsync = isRouteHeavy && isAsync(route.parseBody),
           isErrorHandlerAsync = isAsync(errorHandler || 0),
@@ -153,19 +141,19 @@ class Router<Opts extends routerOpts> {
       errHandler: this.server!._errHandler!,
     };
     var controller: HttpControllerFn = this.options[path]["any"] as any;
-    if (controller instanceof LightRoute)
+    if (controller instanceof LightMethod)
       throw new Error("No Route classes for 'any' routes");
     if (!controller) controller = seeOtherMethods(methods as HttpMethods[]);
     setStructure(anyMonolith, controller);
-    (this.server as any)["any"](toAB(path as string), anyMonolith.controller);
+    (this.server as any)["any"](path, anyMonolith.controller);
     return this;
   }
 }
 /**
  * route WITHOUT body
  */
-class LightRoute<T extends Schemas<"meta">, Shared>
-  implements lightRouteI<T, Shared>
+class LightMethod<T extends Schemas<"meta">, Shared>
+  implements lightMethodI<T, Shared>
 {
   /**
    * function which prepares the request data for the validation (headers, parameters, querystring).
@@ -192,7 +180,7 @@ class LightRoute<T extends Schemas<"meta">, Shared>
     req: HttpRequest,
     data: RequestData<T>
   ) => any | Promise<any>;
-  constructor(opts: lightRouteI<T, Shared>) {
+  constructor(opts: lightMethodI<T, Shared>) {
     this.shared = opts.shared;
     this.schemas = opts.schemas;
     this.onError = opts.onError;
@@ -203,9 +191,9 @@ class LightRoute<T extends Schemas<"meta">, Shared>
 /**
  * route WiTH body
  */
-class HeavyRoute<T extends Schemas<"meta" | "body">, Shared>
-  extends LightRoute<T, Shared>
-  implements heavyRouteI<T, Shared>
+class HeavyMethod<T extends Schemas<"meta" | "body">, Shared>
+  extends LightMethod<T, Shared>
+  implements heavyMethodI<T, Shared>
 {
   /**
    * @param meta data, returned from this.getMeta
@@ -216,7 +204,7 @@ class HeavyRoute<T extends Schemas<"meta" | "body">, Shared>
     req: HttpRequest,
     meta: Static<T["meta"]>
   ) => Static<T["body"]> | Promise<Static<T["body"]>>;
-  constructor(opts: heavyRouteI<T, Shared>) {
+  constructor(opts: heavyMethodI<T, Shared>) {
     super(opts);
     this.getMeta = opts.getMeta;
     this.parseBody = opts.parseBody;
@@ -229,15 +217,15 @@ type Schemas<Keys extends string = string> = Record<Keys, TSchema>;
 type RequestData<T extends Schemas> = {
   [type in keyof T]: Static<T[type]>;
 };
-interface heavyRouteI<T extends Schemas<"meta" | "body">, Shared>
-  extends lightRouteI<T, Shared> {
+interface heavyMethodI<T extends Schemas<"meta" | "body">, Shared>
+  extends lightMethodI<T, Shared> {
   parseBody: (
     res: HttpResponse,
     req: HttpRequest,
     meta: Static<T["meta"]>
   ) => Static<T["body"]> | Promise<Static<T["body"]>>;
 }
-interface lightRouteI<T extends Schemas<"meta">, Shared> {
+interface lightMethodI<T extends Schemas<"meta">, Shared> {
   getMeta: (res: HttpResponse, req: HttpRequest) => Static<T["meta"]>;
   shared?: Shared;
   schemas: T;
@@ -254,8 +242,8 @@ type routerOpts = Record<
   Partial<{
     /*method*/ [Method in HttpMethods]: Method extends "ws"
       ? WebSocketBehavior<any>
-      : HeavyRoute<any, any> | LightRoute<any, any> | HttpControllerFn;
+      : HeavyMethod<any, any> | LightMethod<any, any> | HttpControllerFn;
   }>
 >;
 //#endregion
-export { Router, registerAbort, HeavyRoute, LightRoute };
+export { Router, registerAbort, HeavyMethod, LightMethod };
