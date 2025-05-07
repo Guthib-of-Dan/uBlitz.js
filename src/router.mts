@@ -25,32 +25,13 @@ function bindValidate<T extends string>(
 ): (field: T) => void {
   return (field) => {
     if (validators[field](data[field])) return;
-    if (!res.aborted)
+    if (!res.aborted && !res.finished)
       badRequest(
         res,
         JSON.stringify(validators[field].errors![0]),
         "bad " + field
       );
     throw new Error("bad field " + field);
-  };
-}
-function setStructure<Data>(
-  monolith: routeMonolith,
-  handler: (
-    res: HttpResponse,
-    req: HttpRequest,
-    data: Data
-  ) => any | Promise<any>
-): void {
-  monolith.controller = async (res, req) => {
-    logger.log("any");
-    registerAbort(res);
-    var data: any = {};
-    try {
-      await handler(res, req, data);
-    } catch (error) {
-      await monolith.errHandler!(error as Error, res, data);
-    }
   };
 }
 /**
@@ -135,17 +116,11 @@ class Router<Opts extends routerOpts> {
       logger.log("got ws");
       this.server!.ws(toAB(path as string), this.options[path]["ws"]!);
     }
-    var anyMonolith: routeMonolith = {
-      controller: () => {},
-      route: undefined,
-      errHandler: this.server!._errHandler!,
-    };
     var controller: HttpControllerFn = this.options[path]["any"] as any;
     if (controller instanceof LightMethod)
       throw new Error("No Route classes for 'any' routes");
     if (!controller) controller = seeOtherMethods(methods as HttpMethods[]);
-    setStructure(anyMonolith, controller);
-    (this.server as any)["any"](path, anyMonolith.controller);
+    (this.server as any)["any"](path, controller);
     return this;
   }
 }

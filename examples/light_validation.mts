@@ -37,6 +37,10 @@ var router = new Router({
             )
           );
       },
+      onError(error, res) {
+        if (!res.aborted && !res.finished) res.close();
+        logger.error("ERROR", error);
+      },
     }),
   },
 });

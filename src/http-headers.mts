@@ -140,9 +140,10 @@ class HeadersMap<Opts extends BaseHeaders> extends Map {
     return this;
   }
   /**
-   * last function before "going to response". It converts all string to ArrayBuffers, so that you can delete some keys before it
+   * last function before "going to response". It converts all strings to ArrayBuffers, so you should delete unwanted headers before it
+   * @returns function, which sets all headers on the response.
    * @example
-   * new HeadersMap({...HeadersMap.baseObj}).remove("Content-Security-Policy").prepare();
+   * new HeadersMap({...HeadersMap.baseObj,"a":"a"}).remove("a").prepare();
    */
   prepare(): (res: uwsHttpResponse) => HttpResponse {
     for (const key in this.currentHeaders!)

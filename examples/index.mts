@@ -8,7 +8,7 @@ extendApp(uWS.App())
   .onError((err, res, data) => {
     logger.group("Some error");
     logger.error("somewhere happened this", err);
-    if (!res.aborted) res.close();
+    if (!res.aborted && !res.finished) res.close();
     logger.log("data about request", data);
     logger.groupEnd();
   })

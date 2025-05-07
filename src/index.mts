@@ -74,6 +74,10 @@ declare interface HttpResponse extends uwsHttpResponse {
    * changes when res.onAborted fires.
    */
   aborted?: boolean;
+  /**
+   * You should set it manually when ending the response. Particularly useful if some error has fired and you are doubting whether res.aborted is a sufficient flag.
+   */
+  finished: boolean;
 }
 
 declare type HttpControllerFn = (
