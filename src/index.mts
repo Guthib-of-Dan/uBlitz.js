@@ -2,6 +2,7 @@ import type {
   HttpRequest,
   TemplatedApp,
   HttpResponse as uwsHttpResponse,
+  AppOptions,
 } from "uWebSockets.js";
 import type { PBType, PBMessage } from "./proto.mts";
 import { Buffer } from "node:buffer";
@@ -19,6 +20,10 @@ import {
 import { HeavyMethod, LightMethod, Router } from "./router.mts";
 import { CSPDirs, setCSP, HeadersMap } from "./http-headers.mts";
 import { EventEmitter } from "tseep";
+import {
+  DeclarativeResponse,
+  type DeclarativeResType,
+} from "./uws-missing-types.mts";
 /**
  * function to effortlessly mark response as aborted AND to attach an event emitter, so that you can easily scale the handler. If you don't need event emitter and only some res.aborted - set it by yourself (no overkill for the handler)
  * @param res
@@ -48,7 +53,10 @@ declare interface Server extends TemplatedApp {
   /** set global errorHandler*/
   onError(fn: (error: Error, res: HttpResponse, data: any) => any): Server;
   _errHandler?(error: Error, res: HttpResponse, data: any): any;
+  /**some undocumented property in uWS - get it here */
+  addChildAppDescriptor(...any: any[]): any;
 }
+
 /**
  * function, you pass in definePlugin. Here you can register
  */
@@ -63,6 +71,10 @@ var definePlugin = (plugin: PluginType): PluginType => plugin;
  * little more typed response
  */
 declare interface HttpResponse extends uwsHttpResponse {
+  /**
+   * This method actually exists in original uWebSockets.js, but is undocumented. I'll put it here for your IDE to be happy
+   */
+  collect: (...any: any[]) => any;
   /**
    * An event emitter, which lets you subscribe several listeners to "abort" event OR your own events, defined with Symbol().
    */
@@ -100,11 +112,13 @@ declare type HttpMethods =
   | "ws"; //NOT A HTTP METHOD, but had to put it here
 
 /**
- * extends uWS.App(). See interface @μBlitz/js.Server
+ * extends uWS.App(). See interface Server
  * @param app uWS.App()
  */
-function extendApp(App: TemplatedApp): Server {
-  const server = App as Server;
+function extendApp<
+  T extends { App: (opts: AppOptions) => TemplatedApp; [k: string]: any }
+>(uWS: T, options: AppOptions = {}): Server {
+  const server = uWS.App(options) as Server;
   server.register = function (plugin: PluginType) {
     plugin(this);
     return this;
@@ -113,11 +127,10 @@ function extendApp(App: TemplatedApp): Server {
     server._errHandler = fn;
     return this;
   };
-
   return server;
 }
 /**
- * fast conversion to ArrayBuffer ('cause transferring strings to uWS is really slow)
+ * conversion to ArrayBuffer ('cause transferring strings to uWS is really slow)
  */
 function toAB(data: Buffer | string): ArrayBuffer {
   var NodeBuf: Buffer =
@@ -136,10 +149,12 @@ export {
   type PBMessage,
   type PBType,
   type FileInfo,
+  type DeclarativeResType,
   HeavyMethod,
   Router,
   LightMethod,
   HeadersMap,
+  DeclarativeResponse,
   notFoundConstructor,
   simpleProtoEnc,
   extendApp,

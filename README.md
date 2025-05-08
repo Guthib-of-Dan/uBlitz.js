@@ -10,11 +10,11 @@ import uWS from "uWebSockets.js";
 import { extendApp, logger, LightRoute, HeavyRoute } from "ublitz.js";
 import { doSomethingToData } from "someRandomPackage.js";
 import router1 from "router1.mts";
-const app = extendApp(uWS.App());
+const app = extendApp(uWS);
 app.register(router1);
 app.onError(function (err, res, requestData) {
   logger.error("error out of somewhere", err);
-  if (!res.aborted) res.close();
+  if (!res.aborted && !res.finished) res.close();
   doSomethingToData(requestData);
 });
 
@@ -124,7 +124,7 @@ export default definePlugin(
 
 We don't offer middlewares, but if you need:
 
-- error and abort handling
+- error and extensible abort handling
 - serving static content 500+ megabytes
 - ajv validation
 - straight-forward routing
@@ -132,6 +132,7 @@ We don't offer middlewares, but if you need:
 - coloring your console
 - making your code typescript-first
 - helping with http headers and codes
+- adding you some documentation, which uWS doesn't provide yet
   <br>
   You ARE welcome.
 
@@ -143,10 +144,10 @@ If you are not familiar with core concepts of μWebSockets.js - we won't help. R
 
 I use - you can use too.
 
-## Documentation exists, but community is as large as you can expect from several days of existence.
+## Own documentation exists, uWS documentation is extended.
 
-For now look for examples (or explore code. There is not too much to feel anxious).
+Right now you can search for examples (or explore code. There is not too much to feel anxious).
 
-## Typescript means sacrifice in "no time preparation"
+## Typescript helps you, but forces to compile code
 
 ESbuild - solid choice, bun - great, but for tests (still typescript), tsx - compiles your code on the spot, so is slow. You'll find the way to use ESbuild in examples.

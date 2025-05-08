@@ -1,4 +1,4 @@
-import type { HttpRequest, WebSocketBehavior } from "uWebSockets.js";
+import type { HttpRequest } from "uWebSockets.js";
 import {
   logger,
   toAB,
@@ -11,13 +11,18 @@ import { registerAbort } from "./index.mts";
 import type { Static, TSchema } from "@sinclair/typebox";
 import Ajv from "ajv";
 import { badRequest, seeOtherMethods } from "./http-codes.mts";
+import type {
+  DeclarativeResType,
+  MoreDocumentedWebSocketBehavior,
+} from "./uws-missing-types.mts";
 var ajv = new Ajv();
 
 interface routeMonolith {
-  controller: HttpControllerFn;
+  controller: HttpControllerFn | DeclarativeResType;
   route: any;
   errHandler: Server["_errHandler"];
 }
+
 function bindValidate<T extends string>(
   res: HttpResponse,
   validators: any,
@@ -114,7 +119,7 @@ class Router<Opts extends routerOpts> {
     });
     if (methods.includes("ws")) {
       logger.log("got ws");
-      this.server!.ws(toAB(path as string), this.options[path]["ws"]!);
+      this.server!.ws(toAB(path as string), this.options[path]["ws"]! as any);
     }
     var controller: HttpControllerFn = this.options[path]["any"] as any;
     if (controller instanceof LightMethod)
@@ -216,8 +221,12 @@ type routerOpts = Record<
   /*route*/ string,
   Partial<{
     /*method*/ [Method in HttpMethods]: Method extends "ws"
-      ? WebSocketBehavior<any>
-      : HeavyMethod<any, any> | LightMethod<any, any> | HttpControllerFn;
+      ? MoreDocumentedWebSocketBehavior<any>
+      :
+          | HeavyMethod<any, any>
+          | LightMethod<any, any>
+          | HttpControllerFn
+          | DeclarativeResType;
   }>
 >;
 //#endregion

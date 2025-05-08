@@ -148,8 +148,7 @@ class HeadersMap<Opts extends BaseHeaders> extends Map {
   prepare(): (res: uwsHttpResponse) => HttpResponse {
     for (const key in this.currentHeaders!)
       this.set(toAB(key), toAB(this.currentHeaders![key] as string));
-    this.currentHeaders = undefined;
-    return (res) => this.toRes(res);
+    return (this.currentHeaders = undefined), (res) => this.toRes(res);
   }
   /**
    * write all static headers to response. Use AFTER map.prepare function, if you want speed.

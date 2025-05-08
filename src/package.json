@@ -1,21 +1,23 @@
 {
   "name": "ublitz.js",
-  "version": "1.2.1",
-  "description": "This package collects several utilities for uWebSockets.js, which can simplify the development",
+  "version": "1.2.2",
+  "description": "This package is written with typescript, built on top of uWebSockets.js#20.51.0. It adds several utilities to simplify the development (routing, ajv validation, extensible request abort handler, documentation for many http-headers). Also it has a little more documentation of original websocket and DeclarativeResponse class",
   "keywords": [
-    "uwebsocketsjs",
+    "μWebSockets.js",
     "fast",
     "light",
     "uws",
-    "uWebSockets.js",
-    "uWebSockets",
+    "utilities",
+    "http",
+    "ws",
     "performance",
     "low-level",
     "routing",
     "library",
     "easy",
     "minimal",
-    "μBlitz.js"
+    "μBlitz.js",
+    "DX"
   ],
   "license": "ISC",
   "publishConfig": {

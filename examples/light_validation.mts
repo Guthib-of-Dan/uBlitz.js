@@ -6,6 +6,7 @@ import {
   LightMethod,
   HeadersMap,
   logger,
+  DeclarativeResponse,
 } from "../src/index.mts";
 import { setTimeout } from "node:timers/promises";
 const users = new Map<string, { seen: Date }>();
@@ -43,7 +44,10 @@ var router = new Router({
       },
     }),
   },
+  "/a": {
+    get: new DeclarativeResponse().write("HELLO ").end("WORLD"),
+  },
 });
 export default definePlugin((server) =>
-  router.bind(server).route("/users/:id", "get")
+  router.bind(server).route("/users/:id", "get").route("/a", "get")
 );

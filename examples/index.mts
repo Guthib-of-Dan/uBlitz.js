@@ -1,10 +1,11 @@
 import { extendApp, toAB, logger, notFoundConstructor } from "../src/index.mts"; //npm: import {extendApp} from "ublitz.js"
 import uWS from "uWebSockets.js";
 import staticRouter from "./staticHighLoad.mts";
+import light_validation from "./light_validation.mts";
 const PORT = 9001;
 const HOST = toAB("localhost");
-
-extendApp(uWS.App())
+const app = extendApp(uWS);
+app
   .onError((err, res, data) => {
     logger.group("Some error");
     logger.error("somewhere happened this", err);
@@ -13,7 +14,8 @@ extendApp(uWS.App())
     logger.groupEnd();
   })
   .register(staticRouter)
-  .any("/*", notFoundConstructor("NO FOUND"))
+  .register(light_validation)
+  .any("/*", notFoundConstructor("NOT FOUND"))
   .listen(HOST, PORT, (socket) => {
     if (!socket) logger.error("Server is NOT listening");
     logger.info("Server is listening on port: " + PORT + ", host: localhost");

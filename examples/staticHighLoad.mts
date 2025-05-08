@@ -1,3 +1,4 @@
+import { setTimeout } from "node:timers/promises";
 import {
   definePlugin,
   HeadersMap,
@@ -7,20 +8,18 @@ import {
   registerAbort,
   Router,
 } from "../src/index.mts"; // or "ublitz.js"
-//Didn't put "Content-Length" and "Connection" headers, because they are set with res.endWithoutBody
 
-const setHeadHeaders = new HeadersMap({
+var setHeadHeaders = new HeadersMap({
   ...HeadersMap.baseObj,
   "Content-Type": "text/plain",
 }).prepare();
 
-const setOptsHeader = new HeadersMap({
+var setOptsHeader = new HeadersMap({
   "Access-Control-Allow-Methods": "GET",
   "Access-Control-Allow-Credentials": "false",
 }).prepare();
-
-const code = toAB("204");
-const highLoadRouter = new Router({
+var code = toAB("204");
+var highLoadRouter = new Router({
   "/text.txt": {
     async get(res) {
       //functional controller has no error handling or auto abort handling
@@ -36,6 +35,13 @@ const highLoadRouter = new Router({
       });
       logger.log("Finished with error?", error);
     },
+    ws: {
+      async open(ws) {
+        for (const key in ws) logger.log("KEY", key); // has some method, which are undocumented here, bun documented in ublitz.js!
+        await setTimeout(2000);
+        ws.close();
+      },
+    },
     head: (res) =>
       setHeadHeaders(res.onAborted(() => {}).writeStatus(code)).endWithoutBody(
         1024 * 1024 * 85,
@@ -45,6 +51,8 @@ const highLoadRouter = new Router({
       setOptsHeader(res.onAborted(() => {}).writeStatus(code)).endWithoutBody(),
   },
 });
-export default definePlugin((server) =>
-  highLoadRouter.bind(server).route("/text.txt", "get", "options", "head")
-);
+export default definePlugin((server) => {
+  highLoadRouter
+    .bind(server)
+    .route("/text.txt", "get", "options", "head", "ws");
+});
