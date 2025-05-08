@@ -15,10 +15,7 @@ function checkContentLength(res: uwsHttpResponse, req: HttpRequest): number {
   var CL = Number(req.getHeader("content-length"));
   if (!CL) {
     res.finished = true;
-    res
-      .onAborted(() => {})
-      .writeStatus(c411)
-      .endWithoutBody(0, true);
+    res.cork(() => res.writeStatus(c411).endWithoutBody(0, true));
     throw new Error("Wrong content-length", { cause: { CL } });
   }
   return CL;
@@ -28,21 +25,16 @@ function checkContentLength(res: uwsHttpResponse, req: HttpRequest): number {
  */
 function badRequest(res: uwsHttpResponse, error: string, causeForYou: string) {
   res.finished = true;
-  res
-    .onAborted(() => {})
-    .writeStatus(c400)
-    .end(toAB(error));
+  res.cork(() => res.writeStatus(c400).end(toAB(error)));
   throw new Error("Bad request", { cause: causeForYou });
 }
 /**
  * sends http 413 And throws an Error with a "cause"
  */
 function tooLargeBody(res: uwsHttpResponse, limit: number) {
+  var message = toAB("Body is too large. Limit in bytes - " + limit);
   res.finished = true;
-  res
-    .onAborted(() => {})
-    .writeStatus(c413)
-    .end(toAB("Body too large. Limit - " + limit + " bytes"));
+  res.cork(() => res.writeStatus(c413).end(message));
   throw new Error("body too large", { cause: { limit } });
 }
 /**
@@ -59,11 +51,7 @@ function seeOtherMethodsConstructor(
       .replace(/ WS,*/g, "")
   );
   return (res) =>
-    res
-      .onAborted(() => {})
-      .writeStatus(c405)
-      .writeHeader(allowHeader, methods)
-      .end(c405Message);
+    res.writeStatus(c405).writeHeader(allowHeader, methods).end(c405Message);
 }
 /**
  * Constructs the function, which sets 404 http code and sends the message you have specified
@@ -72,11 +60,7 @@ function notFoundConstructor(
   message: string = "Not found"
 ): (res: uwsHttpResponse, req: any) => any {
   var mes = toAB(message);
-  return (res) =>
-    res
-      .onAborted(() => {})
-      .writeStatus(c404)
-      .end(mes, true);
+  return (res) => res.writeStatus(c404).end(mes, true);
 }
 export {
   checkContentLength,

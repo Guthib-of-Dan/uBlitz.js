@@ -283,7 +283,7 @@ async function parseSimpleBody<
     },
     uint8: Buffer<ArrayBuffer> = Buffer.alloc(0);
   if (!limit) limit = 1024 * 1024;
-  res.onData((ab, isLast) => {
+  res.onData((ab, isLast): any => {
     if (uint8.length + ab.byteLength > limit!) return tooLargeBody(res, limit!);
     uint8 = Buffer.concat([Buffer.from(ab), uint8!]);
     if (isLast) res.emitter.emit(simpleBodyEndEvent);

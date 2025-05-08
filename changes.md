@@ -7,3 +7,4 @@
 - 1.2.1 - Added "finished" property on the response as a second flag along with "aborted"; fixed an issue, which didn't let the "parseFormDataBody" to end, if files sent were too small; removed not needed abstractions from "any" http method in router.
 - 1.2.2 - Wrote documentation for DeclarativeResponse (which uWS doesn't provide yet), for ws.sendFirstFragment, ws.sendFragment, and ws.sendLastFragment methods.
 - 1.2.3 - fixed issue with names of multipart files, when they are saved to disk.
+- 1.2.4 - corked response in "http-codes" handlers
