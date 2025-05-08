@@ -103,7 +103,7 @@ async function parseFormDataBody<T extends "disk" | "memory">({
     info: busboy.FileInfo
   ) => void =
     save === "disk"
-      ? function putToDisk(_, stream, { filename, encoding, mimeType }) {
+      ? function putToDisk(name, stream, { filename, encoding, mimeType }) {
           var path: string | undefined =
               tempPath! + "/" + nanoid(10) + "_" + filename,
             writeStream = createWriteStream(path),
@@ -183,7 +183,7 @@ async function parseFormDataBody<T extends "disk" | "memory">({
                 if (res.aborted) return reject();
                 streams.delete(data);
                 logger.log("END FILE WRITE");
-                files[filename] = { filename, path, mimeType, encoding };
+                files[name] = { filename, path, mimeType, encoding };
                 resolve();
               })
               .once("error", (err) => {
