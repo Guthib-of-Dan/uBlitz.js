@@ -36,7 +36,7 @@
   },
   "exports": {
     ".": "./index.mts",
-    "./multipart": "./body.mts",
+    "./body": "./body.mts",
     "./codes": "./http-codes.mts",
     "./static": "./sendFile.mts",
     "./logger": "./logger.mts",
