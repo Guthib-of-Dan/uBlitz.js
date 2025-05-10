@@ -27,12 +27,17 @@ type Files<T> = Record<string, FileInfo & T>;
 type formData<T> = { fields: object; files: Files<T> };
 type TextBody = TheBody<true, string>;
 /**
- * it parses multipart OR x-www-form-urlencoded body with busboy.Option "save" is applicable only to files. If you use "save: 'disk'" option - you will get "path" of temporary (or whatever you will do with file) location. If "memory" - you will get "contents" field as Buffer
+ * paths of files returned are usually strings.
  */
-
+type FilesOnDisk = Files<{ path: string | undefined }>;
+type FilesInMemory = Files<{ contents: Buffer<ArrayBuffer> }>;
+type FileSchema<T> = Record<keyof T[keyof T], any>;
 var wroteToDiskFileEvent = Symbol(),
   formDataEndEvent = Symbol(),
   simpleBodyEndEvent = Symbol();
+/**
+ * it parses multipart OR x-www-form-urlencoded body with busboy.Option "save" is applicable only to files. If you use "save: 'disk'" option - you will get "path" of temporary (or whatever you will do with file) location. If "memory" - you will get "contents" field as Buffer
+ */
 async function parseFormDataBody<T extends "disk" | "memory">({
   CT,
   res,
@@ -46,13 +51,13 @@ async function parseFormDataBody<T extends "disk" | "memory">({
     headerPairs: 3,
     parts: 11,
   },
-  tempPath,
+  outDir: tempPath,
 }: {
   res: HttpResponse & { paused?: boolean; ok?: boolean };
   CT: string;
   save: T;
   limits?: busboy.Limits;
-  tempPath?: string;
+  outDir: string;
 }): Promise<
   | TheBody<
       true,
@@ -296,4 +301,11 @@ async function parseSimpleBody<
     data: ((actions as any)[CT as any] || (() => uint8))(),
   };
 }
-export { parseFormDataBody, parseSimpleBody, type FileInfo };
+export {
+  parseFormDataBody,
+  parseSimpleBody,
+  type FileInfo,
+  type FileSchema,
+  type FilesInMemory,
+  type FilesOnDisk,
+};

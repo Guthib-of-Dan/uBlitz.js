@@ -1,34 +1,19 @@
 import type {
-  HttpRequest,
+  HttpRequest as uwsHttpRequest,
   TemplatedApp,
   HttpResponse as uwsHttpResponse,
   AppOptions,
+  RecognizedString,
+  us_socket_context_t,
 } from "uWebSockets.js";
-import type { PBType, PBMessage } from "./proto.mts";
 import { Buffer } from "node:buffer";
-import { parseFormDataBody, type FileInfo, parseSimpleBody } from "./body.mts";
-import { sendFile } from "./sendFile.mts";
-import { logger } from "./logger.mts";
-import { simpleProtoEnc } from "./proto.mts";
-import {
-  checkContentLength,
-  seeOtherMethods,
-  badRequest,
-  tooLargeBody,
-  notFoundConstructor,
-} from "./http-codes.mts";
-import { HeavyMethod, LightMethod, Router } from "./router.mts";
-import { CSPDirs, setCSP, HeadersMap } from "./http-headers.mts";
+
 import { EventEmitter } from "tseep";
-import {
-  DeclarativeResponse,
-  type DeclarativeResType,
-} from "./uws-missing-types.mts";
 /**
  * function to effortlessly mark response as aborted AND to attach an event emitter, so that you can easily scale the handler. If you don't need event emitter and only some res.aborted - set it by yourself (no overkill for the handler)
  * @param res
  */
-function registerAbort(res: HttpResponse): HttpResponse {
+function registerAbort(res: uwsHttpResponse): HttpResponse {
   if (typeof res.aborted === "boolean")
     throw new Error("abort already registered");
   res.aborted = false;
@@ -68,9 +53,21 @@ declare type PluginType = (server: Server) => void;
  */
 var definePlugin = (plugin: PluginType): PluginType => plugin;
 /**
- * little more typed response
+ * little more typed response which has:
+ * 1) "emitter", that comes from "tseep" package
+ * 2) "aborted" flag
+ * 3) "finished" flag
+ * 4) "collect" function, which comes from original uWS (and isn't documented), but the purpose remains unknown
  */
-declare interface HttpResponse extends uwsHttpResponse {
+declare interface HttpResponse<UserDataForWS extends object = {}>
+  extends uwsHttpResponse {
+  upgrade<UserData = UserDataForWS>(
+    userData: UserData,
+    secWebSocketKey: RecognizedString,
+    secWebSocketProtocol: RecognizedString,
+    secWebSocketExtensions: RecognizedString,
+    context: us_socket_context_t
+  ): void;
   /**
    * This method actually exists in original uWebSockets.js, but is undocumented. I'll put it here for your IDE to be happy
    */
@@ -91,6 +88,17 @@ declare interface HttpResponse extends uwsHttpResponse {
    */
   finished: boolean;
 }
+/**This HttpRequest is same as original uWS.HttpRequest, but getHeader method is typed for additional tips
+ * @example
+ * import {lowHeaders} from "ublitz.js"
+ * // some handler later
+ * req.getHeader<lowHeaders>("content-type")
+ */
+interface HttpRequest extends uwsHttpRequest {
+  getHeader<T extends string | RecognizedString = RecognizedString>(
+    a: T
+  ): string;
+}
 
 declare type HttpControllerFn = (
   res: HttpResponse,
@@ -108,6 +116,7 @@ declare type HttpMethods =
   | "head"
   | "trace"
   | "options"
+  | "connect"
   | "any"
   | "ws"; //NOT A HTTP METHOD, but had to put it here
 
@@ -145,30 +154,23 @@ export {
   type HttpResponse,
   type HttpMethods,
   type HttpControllerFn,
+  type HttpRequest,
   type Server,
-  type PBMessage,
-  type PBType,
-  type FileInfo,
-  type DeclarativeResType,
-  HeavyMethod,
-  Router,
-  LightMethod,
-  HeadersMap,
-  DeclarativeResponse,
-  notFoundConstructor,
-  simpleProtoEnc,
   extendApp,
-  checkContentLength,
-  seeOtherMethods,
   registerAbort,
-  parseFormDataBody,
-  parseSimpleBody,
-  setCSP,
-  sendFile,
   toAB,
   definePlugin,
-  badRequest,
-  tooLargeBody,
-  CSPDirs,
-  logger,
 };
+
+export {
+  CSPDirs,
+  setCSP,
+  HeadersMap,
+  type lowHeaders,
+  type BaseHeaders,
+} from "./http-headers.mts";
+
+export {
+  DeclarativeResponse,
+  type DeclarativeResType,
+} from "./uws-missing-types.mts";

@@ -25,7 +25,7 @@ function checkContentLength(res: uwsHttpResponse, req: HttpRequest): number {
  */
 function badRequest(res: uwsHttpResponse, error: string, causeForYou: string) {
   res.finished = true;
-  res.cork(() => res.writeStatus(c400).end(toAB(error)));
+  if (!res.aborted) res.cork(() => res.writeStatus(c400).end(toAB(error)));
   throw new Error("Bad request", { cause: causeForYou });
 }
 /**
@@ -33,8 +33,8 @@ function badRequest(res: uwsHttpResponse, error: string, causeForYou: string) {
  */
 function tooLargeBody(res: uwsHttpResponse, limit: number) {
   var message = toAB("Body is too large. Limit in bytes - " + limit);
+  if (!res.aborted) res.cork(() => res.writeStatus(c413).end(message));
   res.finished = true;
-  res.cork(() => res.writeStatus(c413).end(message));
   throw new Error("body too large", { cause: { limit } });
 }
 /**
