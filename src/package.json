@@ -1,22 +1,17 @@
 {
   "name": "ublitz.js",
-  "version": "1.2.4",
-  "description": "This package is written with typescript, built on top of uWebSockets.js#20.51.0. It adds several utilities to simplify the development (routing, ajv validation, extensible request abort handler, documentation for many http-headers). Also it has a little more documentation of original websocket and DeclarativeResponse class",
+  "version": "1.2.5",
+  "description": "This package is written with typescript and built on top of uWebSockets.js#20.52.0. It adds several utilities to simplify the development (routing, ajv validation, extensible request abort handler, documentation for many http-headers). Also it has a little more documentation of original websockets and DeclarativeResponse class",
   "keywords": [
-    "μWebSockets.js",
+    "uWebSockets.js",
     "fast",
     "light",
-    "uws",
     "utilities",
     "http",
     "ws",
-    "performance",
     "low-level",
-    "routing",
     "library",
-    "easy",
     "minimal",
-    "μBlitz.js",
     "DX"
   ],
   "license": "ISC",
@@ -37,7 +32,17 @@
     "busboy": "^1.6.0",
     "nanoid": "^5.1.5",
     "tseep": "^1.3.1",
-    "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.51.0"
+    "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.52.0"
+  },
+  "exports": {
+    ".": "./index.mts",
+    "./body": "./body.mts",
+    "./codes": "./http-codes.mts",
+    "./static": "./sendFile.mts",
+    "./logger": "./logger.mts",
+    "./router": "./router.mts",
+    "./proto": "./proto.mts",
+    "./all": "./all.mts"
   },
   "devDependencies": {
     "fast-jwt": "^6.0.1",

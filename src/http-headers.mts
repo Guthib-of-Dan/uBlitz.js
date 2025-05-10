@@ -14,116 +14,157 @@ var helmetHeaders = {
   //"Content-Security-Policy-Report-Only":"",
   //"Strict-Transport-Security":`max-age=${60 * 60 * 24 * 365}; includeSubDomains`,
 } as const satisfies Partial<BaseHeaders>;
-type BaseHeaders = Partial<
-  {
-    /**
-     * if client fetched resource, but its MIME type is different - abort request
-     */
-    "X-Content-Type-Options": "nosniff";
-    /**
-     * Safari doesn't support it
-     */
-    "X-DNS-Prefetch-Control": "on" | "off";
-    /**
-     * Sites can use this to avoid clickjacking (<iframe> html tag)
-     */
-    "X-Frame-Options": "DENY" | "SAMEORIGIN";
-    /**
-     * whether you need info about client.
-     */
-    "Referrer-Policy":
-      | "no-referrer"
-      | "no-referrer-when-downgrade"
-      | "origin"
-      | "origin-when-cross-origin"
-      | "same-origin"
-      | "strict-origin"
-      | "strict-origin-when-cross-origin"
-      | "unsafe-url";
-    /**
-     * usually for Adobe Acrobat or Microsoft Silverlight.
-     */
-    "X-Permitted-Cross-Domain-Policies":
-      | "none"
-      | "master-only"
-      | "by-content-type"
-      | "by-ftp-filename"
-      | "all"
-      | "none-this-response";
-    /**
-     * Whether downloaded files should be run on the client side immediately. For IE8
-     */
-    "X-Download-Options": "noopen";
-    /**
-     * From where should client fetch resources
-     */
-    "Cross-Origin-Resource-Policy":
-      | "same-site"
-      | "same-origin"
-      | "cross-origin";
-    /**
-     * whether new page opened via Window.open() should be treated differently for performance reasons
-     */
-    "Cross-Origin-Opener-Policy":
-      | "unsafe-none"
-      | "same-origin-allow-popups"
-      | "same-origin"
-      | "noopener-allow-popups";
-    /**
-     *  By adding this header you can declare that your site should only load resources that have explicitly opted-in to being loaded across origins.
-     * "require-corp" LETS YOU USE new SharedArrayBuffer()
-     */
-    "Cross-Origin-Embedder-Policy":
-      | "unsafe-none"
-      | "require-corp"
-      | "credentialless";
-    /**
-     * similar to COOP, where ?1 is true
-     */
-    "Origin-Agent-Cluster": "?0" | "?1";
-    /**
-     * get it from setCSP()
-     */
-    "Content-Security-Policy": string;
-    //"Content-Security-Policy-Report-Only":"",
-    //"Strict-Transport-Security":`max-age=${60 * 60 * 24 * 365}; includeSubDomains`,
-    /**
-     * Allowed origins to get the resource. * - all, https://example.com - some website.
-     */
-    "Access-Control-Allow-Origin": string;
-    /**
-     * Allowed headers in the request.
-     */
-    "Access-Control-Allow-Headers": string;
-    /**
-     * CORS version of Allow header
-     */
-    "Access-Control-Allow-Methods": string;
-    /**
-     * How much time the response should be cached.
-     * 1) must-revalidate
-     * 2) no-cache
-     * 3) no-store
-     * 4) no-transform
-     * 5) public -> cached anyhow
-     * 6) private
-     * 7) proxy-revalidate
-     * 8) max-age=<seconds>
-     * 9) s-maxage=<seconds>;
-     * @but those below aren't supported everywhere:
-     * 1) immutable
-     * 2) stale-while-revalidate=<seconds>
-     * 3) stale-if-error=<seconds>
-     */
-    "Cache-Control": string;
-    "Access-Control-Max-Age": string;
-  } & { [key: string]: string }
->;
+type allHeaders = {
+  /**
+   * Headers, which may change for different responses. Use the same value for all methods of a given url.
+   * @example
+   * "Content-Type, Content-Length"
+   */
+  Vary: string;
+  /**
+   * confirms that client "really wants" to request that an HTTP client is upgraded to become a WebSocket.
+   */
+  "Sec-Websocket-Key": string;
+  /**
+   * protocol, you are communicating with using WebSockets
+   * @see https://www.iana.org/assignments/websocket/websocket.xml#subprotocol-name
+   */
+  "Sec-Websocket-Protocol": string;
+  "Sec-Websocket-Extensions": string;
+  Server: string;
+  "Set-Cookie": string;
+  Upgrade: string;
+  "User-Agent": string;
+  Origin: string;
+  Range: string;
+  Location: string;
+  "Last-Modified": string;
+  Host: string;
+  Forwarded: string;
+  Cookie: string;
+  Allow: string;
+  "Access-Control-Request-Headers": string;
+  "Access-Control-Request-Method": string;
+  /**
+   * indicates which content types, expressed as MIME types, the sender is able to understand
+   */
+  Accept: string;
+
+  /**
+   * if client fetched resource, but its MIME type is different - abort request
+   */
+  "X-Content-Type-Options": "nosniff";
+  /**
+   * Safari doesn't support it
+   */
+  "X-DNS-Prefetch-Control": "on" | "off";
+  /**
+   * Sites can use this to avoid clickjacking (<iframe> html tag)
+   */
+  "X-Frame-Options": "DENY" | "SAMEORIGIN";
+  /**
+   * whether you need info about client.
+   */
+  "Referrer-Policy":
+    | "no-referrer"
+    | "no-referrer-when-downgrade"
+    | "origin"
+    | "origin-when-cross-origin"
+    | "same-origin"
+    | "strict-origin"
+    | "strict-origin-when-cross-origin"
+    | "unsafe-url";
+  /**
+   * usually for Adobe Acrobat or Microsoft Silverlight.
+   */
+  "X-Permitted-Cross-Domain-Policies":
+    | "none"
+    | "master-only"
+    | "by-content-type"
+    | "by-ftp-filename"
+    | "all"
+    | "none-this-response";
+  /**
+   * Whether downloaded files should be run on the client side immediately. For IE8
+   */
+  "X-Download-Options": "noopen";
+  /**
+   * From where should client fetch resources
+   */
+  "Cross-Origin-Resource-Policy": "same-site" | "same-origin" | "cross-origin";
+  /**
+   * whether new page opened via Window.open() should be treated differently for performance reasons
+   */
+  "Cross-Origin-Opener-Policy":
+    | "unsafe-none"
+    | "same-origin-allow-popups"
+    | "same-origin"
+    | "noopener-allow-popups";
+  /**
+   *  By adding this header you can declare that your site should only load resources that have explicitly opted-in to being loaded across origins.
+   * "require-corp" LETS YOU USE new SharedArrayBuffer()
+   */
+  "Cross-Origin-Embedder-Policy":
+    | "unsafe-none"
+    | "require-corp"
+    | "credentialless";
+  /**
+   * similar to COOP, where ?1 is true
+   */
+  "Origin-Agent-Cluster": "?0" | "?1";
+  /**
+   * You know this one. It is "text/html" or "video/mp4" or whatever
+   */
+  "Content-Type": string;
+  /**
+   * Length in bytes of content, you send or receive.
+   * @type number. BUT here it is a string
+   */
+  "Content-Length": string;
+  /**
+   * get it from setCSP()
+   */
+  "Content-Security-Policy": string;
+  //"Content-Security-Policy-Report-Only":"",
+  //"Strict-Transport-Security":`max-age=${60 * 60 * 24 * 365}; includeSubDomains`,
+  /**
+   * Allowed origins to get the resource. * - all, https://example.com - some website.
+   */
+  "Access-Control-Allow-Origin": string;
+  /**
+   * Allowed headers in the request.
+   */
+  "Access-Control-Allow-Headers": string;
+  /**
+   * CORS version of Allow header
+   */
+  "Access-Control-Allow-Methods": string;
+  /**
+   * How much time the response should be cached.
+   * 1) must-revalidate
+   * 2) no-cache
+   * 3) no-store
+   * 4) no-transform
+   * 5) public -> cached anyhow
+   * 6) private
+   * 7) proxy-revalidate
+   * 8) max-age=<seconds>
+   * 9) s-maxage=<seconds>;
+   * @but those below aren't supported everywhere:
+   * 1) immutable
+   * 2) stale-while-revalidate=<seconds>
+   * 3) stale-if-error=<seconds>
+   */
+  "Cache-Control": string;
+  "Access-Control-Max-Age": string;
+};
+type BaseHeaders = Partial<allHeaders & { [key: string]: string }>;
 /**
  * A map containing all headers as ArrayBuffers, so speed remains. There are several use cases of it:
  * 1) Don't define them in requests ( post(res){new HeadersMap({...headers}).prepare().toRes(res)} ). This is slow. Define maps BEFORE actual usage.
- * 2) You can pass them in LightRoute or HeavyRoute (they will fill response as soon as request starts)
- * 3) As a default use HeadersMap.default. It can't be edited, because it is already "prepared". When route isn't some LightRoute or HeavyRoute you should use .toRes(res)
+ * 2) You can pass them in LightMethod or HeavyMethod in shared property (but handle it manually)
+ * 3) As a default use HeadersMap.default. It can't be edited, because it is already "prepared".
+ * 4) Don't define them before writing status on request. uWebSockets.js after first written header considers response successful and puts "200" code automatically. Set headers AFTER validation in class controllers (handler function) and after writing status (or don't write it at all. It will be 200).
  */
 class HeadersMap<Opts extends BaseHeaders> extends Map {
   public currentHeaders: undefined | Opts;
@@ -263,4 +304,5 @@ var CSPDirs = {
   "media-src": ["'self'"] as string[],
 } as const satisfies Record<string, string[]>;
 type CSP = Partial<typeof CSPDirs>;
-export { HeadersMap, type BaseHeaders, setCSP, CSPDirs };
+type lowHeaders = Lowercase<keyof allHeaders>;
+export { HeadersMap, type BaseHeaders, setCSP, CSPDirs, type lowHeaders };

@@ -1,8 +1,10 @@
 import uWS, {
   type CompressOptions,
   type RecognizedString,
+  type us_socket_context_t,
   type WebSocket,
 } from "uWebSockets.js";
+import type { BaseHeaders, HttpRequest, HttpResponse } from "./index.mts";
 /**
  * Thanks to "acarstoiu" github user for listing such methods here: "https://github.com/uNetworking/uWebSockets.js/issues/1165".
  */
@@ -35,7 +37,7 @@ type WebSocketFragmentation = {
 };
 type MoreDocumentedWebSocket<UserData> = WebSocket<UserData> &
   WebSocketFragmentation;
-interface MoreDocumentedWebSocketBehavior<UserData> {
+interface MoreDocumentedWebSocketBehavior<UserData extends object> {
   /** Maximum length of received message. If a client tries to send you a message larger than this, the connection is immediately closed. Defaults to 16 * 1024. */
   maxPayloadLength?: number;
   /** Whether or not we should automatically close the socket when a message is dropped due to backpressure. Defaults to false. */
@@ -85,31 +87,46 @@ interface MoreDocumentedWebSocketBehavior<UserData> {
     newCount: number,
     oldCount: number
   ) => void;
+  /** Upgrade handler used to intercept HTTP upgrade requests and potentially upgrade to WebSocket.
+   * See UpgradeAsync and UpgradeSync example files.
+   */
+  upgrade?: (
+    res: HttpResponse<UserData>,
+    req: HttpRequest,
+    context: us_socket_context_t
+  ) => void | Promise<void>;
 }
 type DeclarativeResType = {
-  writeHeader(
-    key: RecognizedString,
-    value: RecognizedString
-  ): DeclarativeResType;
-  writeQueryValue(key: RecognizedString): DeclarativeResType;
-  writeHeaderValue(key: RecognizedString): DeclarativeResType;
+  writeHeader(key: string, value: string): DeclarativeResType;
+  writeQueryValue(key: string): DeclarativeResType;
+  writeHeaderValue(key: string): DeclarativeResType;
   /**
    * Write a chunk to the precompiled response
    */
-  write(value: RecognizedString): DeclarativeResType;
-  writeParameterValue(key: RecognizedString): DeclarativeResType;
+  write(value: string): DeclarativeResType;
+  writeParameterValue(key: string): DeclarativeResType;
   /**
    * Method to finalize forming a response.
    */
-  end(value: RecognizedString): any;
+  end(value: string): any;
   writeBody(): DeclarativeResType;
+  /**
+   * additional method from ublitz.js
+   */
+  writeHeaders<Opts extends BaseHeaders>(headers: Opts): DeclarativeResType;
 };
 /**
- * Nothing different from uWS.DeclarativeResponse, however considering that its types are absent in uWS -> you get them here.
+ * Almost nothing different from uWS.DeclarativeResponse. The only modification - writeHeaders method (several methods, typescript intellisense)
  */
 var DeclarativeResponse: {
   new (): DeclarativeResType;
 } = (uWS as any).DeclarativeResponse;
+DeclarativeResponse.prototype.writeHeaders = function <
+  Opts extends BaseHeaders
+>(this: DeclarativeResType, headers: Opts) {
+  for (const key in headers) this.writeHeader(key, headers[key] as any);
+  return this;
+};
 export {
   type MoreDocumentedWebSocketBehavior,
   type MoreDocumentedWebSocket,

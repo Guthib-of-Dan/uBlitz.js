@@ -1,11 +1,10 @@
-import type { HttpRequest } from "uWebSockets.js";
 import {
-  logger,
   toAB,
   type HttpControllerFn,
   type HttpMethods,
   type HttpResponse,
   type Server,
+  type HttpRequest,
 } from "./index.mts";
 import { registerAbort } from "./index.mts";
 import type { Static, TSchema } from "@sinclair/typebox";
@@ -13,7 +12,7 @@ import Ajv from "ajv";
 import { badRequest, seeOtherMethods } from "./http-codes.mts";
 import type {
   DeclarativeResType,
-  MoreDocumentedWebSocketBehavior,
+  MoreDocumentedWebSocketBehavior as DocumentedWSBehavior,
 } from "./uws-missing-types.mts";
 var ajv = new Ajv();
 
@@ -43,6 +42,7 @@ function bindValidate<T extends string>(
  * @author me: "Route's description is the route itself".
  * @description No need to separate controller and call it like "app.post("/createDbUser",createDbUser)", if names are the same.
  * With this class you specify route and then its methods. Just this.
+ * @external look in github examples folder
  */
 class Router<Opts extends routerOpts> {
   private options: Opts;
@@ -58,10 +58,11 @@ class Router<Opts extends routerOpts> {
     return this;
   }
   /**
+   * This function gives uWS you controllers. If you don't call this function - controller won't work
    * @example
-   * router.bind(server).route(PATH, ...registeredMethods)
+   * router.bind(server).define(PATH, ...registeredMethods)
    */
-  public route<Path extends keyof Opts>(
+  public define<Path extends keyof Opts>(
     path: Path,
     ...methods: (keyof Opts[Path])[]
   ): this {
@@ -118,8 +119,8 @@ class Router<Opts extends routerOpts> {
       (this.server as any)[method](toAB(path as string), monolith.controller);
     });
     if (methods.includes("ws")) {
-      logger.log("got ws");
-      this.server!.ws(toAB(path as string), this.options[path]["ws"]! as any);
+      const opts = this.options[path]["ws"]!;
+      this.server!.ws(toAB(path as string), opts as any);
     }
     var controller: HttpControllerFn = this.options[path]["any"] as any;
     if (controller instanceof LightMethod)
@@ -130,7 +131,14 @@ class Router<Opts extends routerOpts> {
   }
 }
 /**
- * route WITHOUT body
+ * class controller WITHOUT body
+ * @description
+ * Lifecycle:
+ * 1) registerAbort
+ * 2) getMeta (headers, query, params)
+ * 3) internal validation (if failed - 400 http code, res.finished = true AND throws an error)
+ * 4) handler
+ * @throws errors into 1) this.onError 2) global onError 3) empty catch block
  */
 class LightMethod<T extends Schemas<"meta">, Shared>
   implements lightMethodI<T, Shared>
@@ -151,6 +159,9 @@ class LightMethod<T extends Schemas<"meta">, Shared>
    * @returns
    */
   onError?: (error: Error, res: HttpResponse, data: RequestData<T>) => any;
+  /**
+   * here you may or may not compile strings to arrayBuffers, save headersMap, do WHATEVER you want and use that with this.shared! expression
+   */
   shared?: Shared;
   /**
    * @param data same as described in this.schemas, but validated
@@ -169,7 +180,15 @@ class LightMethod<T extends Schemas<"meta">, Shared>
   }
 }
 /**
- * route WiTH body
+ * Class controller for handling requests with body.
+ * Lifecycle:
+ * 1) registerAbort(res)
+ * 2) getMeta
+ * 3) validate meta (if bad - throws an error + 404 code)
+ * 4) await parseBody
+ * 5) validate body (if bad - throws an error + 404 code)
+ * 6) handler
+ * @throws errors into : 1) this.onError OR 2) global app.onError OR 3) empty catch block
  */
 class HeavyMethod<T extends Schemas<"meta" | "body">, Shared>
   extends LightMethod<T, Shared>
@@ -221,7 +240,7 @@ type routerOpts = Record<
   /*route*/ string,
   Partial<{
     /*method*/ [Method in HttpMethods]: Method extends "ws"
-      ? MoreDocumentedWebSocketBehavior<any>
+      ? WSOpts<any>
       :
           | HeavyMethod<any, any>
           | LightMethod<any, any>
@@ -229,5 +248,12 @@ type routerOpts = Record<
           | DeclarativeResType;
   }>
 >;
-//#endregion
-export { Router, registerAbort, HeavyMethod, LightMethod };
+type WSOpts<UserData extends object = {}> = DocumentedWSBehavior<UserData>;
+/**
+ * This function takes a callback, which should  return basic websocket settings, like in uWS. Its purpose is to create a scope, in which you can create some shared variables for all handlers.
+ */
+var WSMethod = <UserData extends object>(
+  fn: () => WSOpts<UserData>
+): WSOpts<UserData> => fn();
+
+export { Router, HeavyMethod, LightMethod, WSMethod };

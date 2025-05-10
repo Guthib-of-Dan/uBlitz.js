@@ -16,3 +16,5 @@ a.ts
 src/README.md
 dist
 tests/package.json
+*.mp4
+uploads

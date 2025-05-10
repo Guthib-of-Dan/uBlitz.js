@@ -1,4 +1,4 @@
-import { logger, type HttpResponse } from "./index.mts";
+import { type HttpResponse } from "./index.mts";
 import type { PBType } from "./proto.mts";
 import { EventEmitter } from "tseep";
 import { tooLargeBody } from "./http-codes.mts";
@@ -27,12 +27,17 @@ type Files<T> = Record<string, FileInfo & T>;
 type formData<T> = { fields: object; files: Files<T> };
 type TextBody = TheBody<true, string>;
 /**
- * it parses multipart OR x-www-form-urlencoded body with busboy.Option "save" is applicable only to files. If you use "save: 'disk'" option - you will get "path" of temporary (or whatever you will do with file) location. If "memory" - you will get "contents" field as Buffer
+ * paths of files returned are usually strings.
  */
-
+type FilesOnDisk = Files<{ path: string | undefined }>;
+type FilesInMemory = Files<{ contents: Buffer<ArrayBuffer> }>;
+type FileSchema<T> = Record<keyof T[keyof T], any>;
 var wroteToDiskFileEvent = Symbol(),
   formDataEndEvent = Symbol(),
   simpleBodyEndEvent = Symbol();
+/**
+ * it parses multipart OR x-www-form-urlencoded body with busboy.Option "save" is applicable only to files. If you use "save: 'disk'" option - you will get "path" of temporary (or whatever you will do with file) location. If "memory" - you will get "contents" field as Buffer
+ */
 async function parseFormDataBody<T extends "disk" | "memory">({
   CT,
   res,
@@ -46,13 +51,13 @@ async function parseFormDataBody<T extends "disk" | "memory">({
     headerPairs: 3,
     parts: 11,
   },
-  tempPath,
+  outDir: tempPath,
 }: {
   res: HttpResponse & { paused?: boolean; ok?: boolean };
   CT: string;
   save: T;
   limits?: busboy.Limits;
-  tempPath?: string;
+  outDir: string;
 }): Promise<
   | TheBody<
       true,
@@ -83,7 +88,6 @@ async function parseFormDataBody<T extends "disk" | "memory">({
     lastError: Error | null = null;
   res.ok = true;
   function clearAll() {
-    logger.error("CLEAR ALL");
     if (clearedStreams) return;
     clearedStreams = true;
     if (!multi.writableEnded || !multi.errored) multi.destroy();
@@ -160,7 +164,6 @@ async function parseFormDataBody<T extends "disk" | "memory">({
             })
             .once("end", async () => {
               stream.removeAllListeners();
-              logger.log("END FILE READ");
               if (res.aborted) return;
               if (!stream.readableDidRead) return deleteEmptyFile();
               if (processingQueue)
@@ -182,7 +185,6 @@ async function parseFormDataBody<T extends "disk" | "memory">({
                 writeStream.removeAllListeners();
                 if (res.aborted) return reject();
                 streams.delete(data);
-                logger.log("END FILE WRITE");
                 files[name] = { filename, path, mimeType, encoding };
                 resolve();
               })
@@ -227,7 +229,6 @@ async function parseFormDataBody<T extends "disk" | "memory">({
       fields[fieldname] = value;
     })
     .once("finish", () => {
-      logger.log("MULTI FINISH");
       //when files write to disk - end
       function end(reason: Error | any[]) {
         if (res.aborted || reason instanceof Error) return clearAll();
@@ -296,4 +297,11 @@ async function parseSimpleBody<
     data: ((actions as any)[CT as any] || (() => uint8))(),
   };
 }
-export { parseFormDataBody, parseSimpleBody, type FileInfo };
+export {
+  parseFormDataBody,
+  parseSimpleBody,
+  type FileInfo,
+  type FileSchema,
+  type FilesInMemory,
+  type FilesOnDisk,
+};

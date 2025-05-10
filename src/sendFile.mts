@@ -128,6 +128,7 @@ async function sendFile({
   await new Promise<void | Error>((resolve) => {
     res.emitter.once(globalEndEvent, resolve);
   });
+  if (res.done) res.finished = true;
   readStream.removeAllListeners();
   return res.error;
 }
