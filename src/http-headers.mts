@@ -21,9 +21,35 @@ type allHeaders = {
    * "Content-Type, Content-Length"
    */
   Vary: string;
+  /**
+   * confirms that client "really wants" to request that an HTTP client is upgraded to become a WebSocket.
+   */
   "Sec-Websocket-Key": string;
+  /**
+   * protocol, you are communicating with using WebSockets
+   * @see https://www.iana.org/assignments/websocket/websocket.xml#subprotocol-name
+   */
   "Sec-Websocket-Protocol": string;
   "Sec-Websocket-Extensions": string;
+  Server: string;
+  "Set-Cookie": string;
+  Upgrade: string;
+  "User-Agent": string;
+  Origin: string;
+  Range: string;
+  Location: string;
+  "Last-Modified": string;
+  Host: string;
+  Forwarded: string;
+  Cookie: string;
+  Allow: string;
+  "Access-Control-Request-Headers": string;
+  "Access-Control-Request-Method": string;
+  /**
+   * indicates which content types, expressed as MIME types, the sender is able to understand
+   */
+  Accept: string;
+
   /**
    * if client fetched resource, but its MIME type is different - abort request
    */

@@ -10,7 +10,7 @@ import { sendFile } from "ublitz.js/static";
 import { Router } from "ublitz.js/router";
 import { notFoundConstructor } from "ublitz.js/codes";
 import fs from "node:fs/promises";
-const server = extendApp(uWS);
+const server = extendApp(uWS.App());
 
 const port = 9001;
 //small utility

@@ -31,7 +31,7 @@ Use a bundler like esbuild, typescript compiler or "tsx" package. I prefer esbui
 
 ## Main purpose - handle BASE.
 
-This package is created for those, who has tried uWebSockets.js himself, enjoyed the performance AND understands the difference between massive abstractions and utilities with less overhead and higher.
+This package is created for those, who has tried uWebSockets.js himself, enjoyed the performance AND understands the difference between massive abstractions and utilities with less overhead and higher performance.
 
 ## WE offer:
 
@@ -45,7 +45,6 @@ This package is created for those, who has tried uWebSockets.js himself, enjoyed
 - making your code typescript-first
 - helping with http headers and codes
 - adding you some documentation, which uWS hasn't provided yet
-- performance
 
 ## We don't offer and won't offer
 

@@ -10,7 +10,7 @@ import {
 import { WSMethod, Router } from "ublitz.js/router";
 import { logger } from "ublitz.js/logger";
 import { setTimeout as setAsyncTimeout } from "node:timers/promises";
-const server = extendApp(uWS);
+const server = extendApp(uWS.App());
 const port = 9001;
 const router = new Router({
   "/*": {

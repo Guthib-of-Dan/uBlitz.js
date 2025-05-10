@@ -2,7 +2,6 @@ import type {
   HttpRequest as uwsHttpRequest,
   TemplatedApp,
   HttpResponse as uwsHttpResponse,
-  AppOptions,
   RecognizedString,
   us_socket_context_t,
 } from "uWebSockets.js";
@@ -121,20 +120,16 @@ declare type HttpMethods =
   | "ws"; //NOT A HTTP METHOD, but had to put it here
 
 /**
- * extends uWS.App(). See interface Server
+ * extends uWS.App() or uWS.SSLApp. See interface Server
  * @param app uWS.App()
  */
-function extendApp<
-  T extends { App: (opts: AppOptions) => TemplatedApp; [k: string]: any }
->(uWS: T, options: AppOptions = {}): Server {
-  const server = uWS.App(options) as Server;
+function extendApp(app: TemplatedApp): Server {
+  const server = app as Server;
   server.register = function (plugin: PluginType) {
-    plugin(this);
-    return this;
+    return plugin(this), this;
   };
-  server.onError = function (fn) {
-    server._errHandler = fn;
-    return this;
+  server.onError = function (fn: any) {
+    return (server._errHandler = fn), this;
   };
   return server;
 }

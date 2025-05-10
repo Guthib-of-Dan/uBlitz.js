@@ -1,4 +1,4 @@
-import { logger, type HttpResponse } from "./index.mts";
+import { type HttpResponse } from "./index.mts";
 import type { PBType } from "./proto.mts";
 import { EventEmitter } from "tseep";
 import { tooLargeBody } from "./http-codes.mts";
@@ -88,7 +88,6 @@ async function parseFormDataBody<T extends "disk" | "memory">({
     lastError: Error | null = null;
   res.ok = true;
   function clearAll() {
-    logger.error("CLEAR ALL");
     if (clearedStreams) return;
     clearedStreams = true;
     if (!multi.writableEnded || !multi.errored) multi.destroy();
@@ -165,7 +164,6 @@ async function parseFormDataBody<T extends "disk" | "memory">({
             })
             .once("end", async () => {
               stream.removeAllListeners();
-              logger.log("END FILE READ");
               if (res.aborted) return;
               if (!stream.readableDidRead) return deleteEmptyFile();
               if (processingQueue)
@@ -187,7 +185,6 @@ async function parseFormDataBody<T extends "disk" | "memory">({
                 writeStream.removeAllListeners();
                 if (res.aborted) return reject();
                 streams.delete(data);
-                logger.log("END FILE WRITE");
                 files[name] = { filename, path, mimeType, encoding };
                 resolve();
               })
@@ -232,7 +229,6 @@ async function parseFormDataBody<T extends "disk" | "memory">({
       fields[fieldname] = value;
     })
     .once("finish", () => {
-      logger.log("MULTI FINISH");
       //when files write to disk - end
       function end(reason: Error | any[]) {
         if (res.aborted || reason instanceof Error) return clearAll();

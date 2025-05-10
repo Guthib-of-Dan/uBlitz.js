@@ -13,7 +13,7 @@ import {
   parseSimpleBody,
   parseFormDataBody,
 } from /*if you don't care about bundle size*/ "ublitz.js/all";
-const app = extendApp(uWS);
+const app = extendApp(uWS.App());
 const router = new Router({
   "/json": {
     /**

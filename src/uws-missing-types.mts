@@ -4,7 +4,7 @@ import uWS, {
   type us_socket_context_t,
   type WebSocket,
 } from "uWebSockets.js";
-import type { HttpRequest, HttpResponse } from "./index.mts";
+import type { BaseHeaders, HttpRequest, HttpResponse } from "./index.mts";
 /**
  * Thanks to "acarstoiu" github user for listing such methods here: "https://github.com/uNetworking/uWebSockets.js/issues/1165".
  */
@@ -110,13 +110,23 @@ type DeclarativeResType = {
    */
   end(value: string): any;
   writeBody(): DeclarativeResType;
+  /**
+   * additional method from ublitz.js
+   */
+  writeHeaders<Opts extends BaseHeaders>(headers: Opts): DeclarativeResType;
 };
 /**
- * Nothing different from uWS.DeclarativeResponse, however considering that its types are absent in uWS -> you get them here.
+ * Almost nothing different from uWS.DeclarativeResponse. The only modification - writeHeaders method (several methods, typescript intellisense)
  */
 var DeclarativeResponse: {
   new (): DeclarativeResType;
 } = (uWS as any).DeclarativeResponse;
+DeclarativeResponse.prototype.writeHeaders = function <
+  Opts extends BaseHeaders
+>(this: DeclarativeResType, headers: Opts) {
+  for (const key in headers) this.writeHeader(key, headers[key] as any);
+  return this;
+};
 export {
   type MoreDocumentedWebSocketBehavior,
   type MoreDocumentedWebSocket,

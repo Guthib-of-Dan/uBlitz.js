@@ -4,7 +4,7 @@ async function compileExamplesToDist() {
   var fs = await import("node:fs/promises");
   esbuild
     .build({
-      entryPoints: ["examples/WebSockets.mts"],
+      entryPoints: ["examples/Router.mts"],
       outdir: "dist",
       platform: "node",
       bundle: true,

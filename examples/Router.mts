@@ -27,8 +27,10 @@ const router = new Router({
   "/static/yes": {
     // Typed DeclarativeResponse (original had no docs)
     get: new DeclarativeResponse()
-      .writeHeader("Content-Type", "text/plain")
-      .writeHeader("Referrer-Policy", "no-referrer")
+      .writeHeaders({
+        "Content-Type": "text/plain",
+        "Referrer-Policy": "no-referrer",
+      })
       .end("Yeah. THIS is VERY static."),
   },
   // params as in basic uWS
@@ -99,7 +101,7 @@ const plugin = definePlugin((server: Server) =>
     .define("/*", "any")
 );
 
-extendApp(uWS)
+extendApp(uWS.App())
   /**catches errors for all CLASS controllers */
   .onError((error, res /*,data*/) => {
     if (!res.aborted && !res.finished) res.close();
