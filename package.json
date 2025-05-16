@@ -1,0 +1,86 @@
+{
+  "name": "ublitz.js",
+  "version": "1.3.1",
+  "description": "This package is written with full typescript support and built on top of uWebSockets.js#20.52.0. It adds several utilities to simplify the development (routing, ajv validation, extensible request abort handler, documentation for many http-headers). Also it has a little more documentation of original websockets and DeclarativeResponse class",
+  "keywords": [
+    "uWebSockets.js",
+    "fast",
+    "light",
+    "utilities",
+    "http",
+    "ws",
+    "low-level",
+    "library",
+    "minimal",
+    "typescript",
+    "DX"
+  ],
+  "license": "ISC",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git:https://github.com/Guthib-of-Dan/uBlitz.js.git"
+  },
+  "homepage": "https://github.com/Guthib-of-Dan/uBlitz.js#readme",
+  "author": "Daniel",
+  "type": "module",
+  "main": "./src/js/index.mjs",
+  "dependencies": {
+    "@sinclair/typebox": "^0.34.33",
+    "ajv": "^8.17.1",
+    "busboy": "^1.6.0",
+    "nanoid": "^5.1.5",
+    "tseep": "^1.3.1",
+    "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.52.0"
+  },
+  "exports": {
+    ".": {
+      "import": "./src/js/index.mjs",
+      "types": "./src/types/index.d.ts"
+    },
+    "./body": {
+      "import": "./src/js/body.mjs",
+      "types": "./src/types/body.d.ts"
+    },
+    "./codes": {
+      "import": "./src/js/http-codes.mjs",
+      "types": "./src/types/http-codes.d.ts"
+    },
+    "./static": {
+      "import": "./src/js/static.mjs",
+      "types": "./src/types/static.d.ts"
+    },
+    "./logger": {
+      "import": "./src/js/logger.mjs",
+      "types": "./src/types/logger.d.ts"
+    },
+    "./router": {
+      "import": "./src/js/router.mjs",
+      "types": "./src/types/router.d.ts"
+    },
+    "./proto": {
+      "import": "./src/js/proto.mjs",
+      "types": "./src/types/proto.d.ts"
+    },
+    "./all": {
+      "import": "./src/js/all.mjs",
+      "types": "./src/types/all.d.ts"
+    },
+    "./uws-types": {
+      "import": "./src/js/uws-missing-types.mjs",
+      "types": "./src/types/uws-missing-types.d.ts"
+    }
+  },
+  "devDependencies": {
+    "cookie": "^1.0.2",
+    "esbuild": "^0.25.4",
+    "fast-jwt": "^6.0.1",
+    "openapi3-ts": "^4.4.0",
+    "protobufjs": "^7.4.0",
+    "protobufjs-cli": "^1.1.3",
+    "puppeteer-core": "^24.6.0",
+    "vitest": "^3.1.1"
+  }
+}
